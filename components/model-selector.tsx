@@ -70,10 +70,12 @@ function getCapabilityIcon(modality: string) {
 export function ModelSelector({
   session,
   selectedModelId,
+  setSelectedModelId,
   className,
 }: {
   session: Session;
   selectedModelId: string;
+  setSelectedModelId: (id: string) => void;
 } & React.ComponentProps<typeof Button>) {
   const [open, setOpen] = useState(false);
   const [models, setModels] = useState<OpenRouterModel[]>([]);
@@ -144,8 +146,8 @@ export function ModelSelector({
 
   async function handleSelect(id: string) {
     setOpen(false);
+    setSelectedModelId(id);
     await saveChatModelAsCookie(id);
-    router.refresh();
   }
 
   function renderModelCard(model: OpenRouterModel, isCompact = false) {

@@ -41,6 +41,7 @@ export function Chat({
   autoResume: boolean;
 }) {
   const { mutate } = useSWRConfig();
+  const [selectedModel, setSelectedModel] = useState(initialChatModel);
 
   const { visibilityType } = useChatVisibility({
     chatId: id,
@@ -69,7 +70,7 @@ export function Chat({
     experimental_prepareRequestBody: (body) => ({
       id,
       message: body.messages.at(-1),
-      selectedChatModel: initialChatModel,
+      selectedChatModel: selectedModel,
       selectedVisibilityType: visibilityType,
     }),
     onFinish: () => {
@@ -130,7 +131,8 @@ export function Chat({
           {!isReadonly && (
             <ModelSelector
               session={session}
-              selectedModelId={initialChatModel}
+              selectedModelId={selectedModel}
+              setSelectedModelId={setSelectedModel}
               className="order-1 md:order-2"
             />
           )}
