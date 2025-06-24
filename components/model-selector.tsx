@@ -141,8 +141,10 @@ export function ModelSelector({
   }
 
   function handleSelect(id: string) {
+    console.log('Model selected:', id);
     setOpen(false);
     saveChatModelAsCookie(id);
+    window.location.reload(); // Force reload to update model everywhere
   }
 
   function renderModelCard(model: OpenRouterModel, isCompact = false) {
@@ -226,7 +228,7 @@ export function ModelSelector({
       {open && (
         <div className="fixed inset-0 z-[9999] bg-black/50" onClick={() => setOpen(false)}>
           <div 
-            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-4xl max-h-[85vh] bg-background border border-border rounded-xl shadow-2xl overflow-hidden z-[10000]"
+            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-4xl max-h-[85vh] bg-background border border-border rounded-xl shadow-2xl overflow-hidden z-[10000] pointer-events-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
