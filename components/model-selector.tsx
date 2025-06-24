@@ -1,318 +1,150 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from "react";
-import { saveChatModelAsCookie } from "@/app/(chat)/actions";
-import { Button } from "@/components/ui/button";
-import { CheckCircleFillIcon, ChevronDownIcon } from "./icons";
-import { cn } from "@/lib/utils";
-import type { Session } from "next-auth";
-import { useRouter } from 'next/navigation';
+import { useState, useMemo, useOptimistic, startTransition, useEffect } from 'react';
+import useSWR from 'swr';
+import { saveChatModelAsCookie } from '@/app/(chat)/actions';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { CheckCircleFillIcon, ChevronDownIcon } from './icons';
+import type { Session } from 'next-auth';
 
-const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/models";
-
-interface OpenRouterModel {
+type OpenRouterModel = {
   id: string;
   name: string;
-  description: string;
-  architecture: {
-    input_modalities: string[];
-    output_modalities: string[];
+  description?: string;
+  architecture?: {
+    input_modalities?: string[];
+    output_modalities?: string[];
   };
-  pricing: {
-    prompt: string;
-    completion: string;
-  };
-  context_length: number;
-}
+};
 
-function getFavorites(): string[] {
-  if (typeof window === "undefined") return [];
-  try {
-    return JSON.parse(localStorage.getItem("openrouter_favorites") || "[]");
-  } catch {
-    return [];
-  }
-}
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-function setFavorites(favs: string[]) {
-  localStorage.setItem("openrouter_favorites", JSON.stringify(favs));
-}
-
-function getProviderFromId(id: string): string {
-  return id.split('/')[0] || 'unknown';
-}
-
-function getProviderIcon(provider: string) {
-  const icons: Record<string, string> = {
-    'openai': '🤖',
-    'anthropic': '🧠', 
-    'google': '🟡',
-    'meta': '🦙',
-    'mistral': '🌟',
-    'cohere': '🔷',
-    'perplexity': '🔍',
-    'x-ai': '❌',
-    'microsoft': '🔷',
-  };
-  return icons[provider] || '⚡';
-}
-
-function getCapabilityIcon(modality: string) {
-  const icons: Record<string, string> = {
-    'text': '📝',
-    'image': '🖼️', 
-    'file': '📎',
-    'vision': '👁️',
-  };
-  return icons[modality] || '⚙️';
-}
+const FAVORITE_IDS = [
+  'openai/gpt-4o',
+  'openai/gpt-4o-mini',
+  'google/gemini-pro',
+  'anthropic/claude-3-5-sonnet',
+  'openai/gpt-4o-image-beta',
+];
 
 export function ModelSelector({
   session,
   selectedModelId,
-  setSelectedModelId,
   className,
 }: {
   session: Session;
   selectedModelId: string;
-  setSelectedModelId: (id: string) => void;
 } & React.ComponentProps<typeof Button>) {
   const [open, setOpen] = useState(false);
-  const [models, setModels] = useState<OpenRouterModel[]>([]);
-  const [search, setSearch] = useState("");
-  const [favorites, setFavs] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const [optimisticModelId, setOptimisticModelId] =
+    useOptimistic(selectedModelId);
+  const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    setFavs(getFavorites());
-  }, []);
+  const { data } = useSWR<{ data: OpenRouterModel[] }>(
+    '/api/openrouter/models',
+    fetcher,
+  );
 
-  useEffect(() => {
-    async function fetchModels() {
-      try {
-        setLoading(true);
-        const response = await fetch(OPENROUTER_API_URL);
-        const data = await response.json();
-        setModels(data.data || []);
-      } catch (error) {
-        console.error('Failed to fetch models:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchModels();
-  }, []);
+  const models: OpenRouterModel[] = data?.data ?? [];
 
   const filteredModels = useMemo(() => {
-    let filtered = models;
-    if (search) {
-      filtered = filtered.filter((m) =>
-        m.name.toLowerCase().includes(search.toLowerCase()) ||
-        m.id.toLowerCase().includes(search.toLowerCase()) ||
-        m.description.toLowerCase().includes(search.toLowerCase())
-      );
-    }
-    return filtered;
+    if (!search.trim()) return models;
+    return models.filter((m) =>
+      `${m.name} ${m.id}`.toLowerCase().includes(search.toLowerCase()),
+    );
   }, [models, search]);
 
-  const favoriteModels = filteredModels.filter((m) => favorites.includes(m.id));
-  const otherModels = filteredModels.filter((m) => !favorites.includes(m.id));
+  const favoriteModels = filteredModels.filter((m) => FAVORITE_IDS.includes(m.id));
+  const otherModels = filteredModels.filter((m) => !FAVORITE_IDS.includes(m.id));
 
-  // Group other models by provider
-  const groupedModels = useMemo(() => {
-    const groups: Record<string, OpenRouterModel[]> = {};
-    otherModels.forEach(model => {
-      const provider = getProviderFromId(model.id);
-      if (!groups[provider]) {
-        groups[provider] = [];
-      }
-      groups[provider].push(model);
-    });
-    return groups;
-  }, [otherModels]);
+  // Automatically close dropdown on outside navigation
+  useEffect(() => {
+    if (!open) setSearch('');
+  }, [open]);
 
-  function toggleFavorite(id: string, e: React.MouseEvent) {
-    e.stopPropagation();
-    let favs = getFavorites();
-    if (favs.includes(id)) {
-      favs = favs.filter((f: string) => f !== id);
-    } else {
-      favs.push(id);
-    }
-    setFavorites(favs);
-    setFavs(favs);
-  }
-
-  async function handleSelect(id: string) {
-    setOpen(false);
-    setSelectedModelId(id);
-    await saveChatModelAsCookie(id);
-  }
-
-  function renderModelCard(model: OpenRouterModel, isCompact = false) {
-    const isSelected = model.id === selectedModelId;
-    const isFavorite = favorites.includes(model.id);
-    const provider = getProviderFromId(model.id);
-
+  const renderItem = (model: OpenRouterModel) => {
+    const { id, name, description } = model;
     return (
-      <div
-        key={model.id}
-        className={cn(
-          "relative rounded-xl border border-border bg-card p-4 cursor-pointer transition-all duration-200 hover:border-primary/50 hover:shadow-md",
-          isSelected && "border-primary bg-primary/5 shadow-sm",
-          isCompact ? "min-h-[120px]" : "min-h-[140px]",
-          "flex flex-col justify-between"
-        )}
-        onClick={() => handleSelect(model.id)}
+      <DropdownMenuItem
+        key={id}
+        onSelect={() => {
+          setOpen(false);
+          startTransition(() => {
+            setOptimisticModelId(id);
+            saveChatModelAsCookie(id);
+          });
+        }}
+        data-active={id === optimisticModelId}
+        asChild
       >
-        {/* Header with name and favorite */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">{getProviderIcon(provider)}</span>
-            <div>
-              <h3 className="font-semibold text-sm leading-tight">{model.name}</h3>
-              {isSelected && (
-                <div className="flex items-center gap-1 mt-1">
-                  <CheckCircleFillIcon />
-                  <span className="text-xs text-primary">Selected</span>
-                </div>
-              )}
+        <button
+          type="button"
+          className="gap-4 group/item flex flex-row justify-between items-center w-full"
+        >
+          <div className="flex flex-col gap-1 items-start text-left">
+            <div>{name || id}</div>
+            <div className="text-xs text-muted-foreground max-w-[220px] truncate">
+              {description}
             </div>
           </div>
-          <button
-            className={cn(
-              "text-lg transition-colors",
-              isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
-            )}
-            onClick={(e) => toggleFavorite(model.id, e)}
-            title={isFavorite ? "Remove from favorites" : "Add to favorites"}
-          >
-            {isFavorite ? "★" : "☆"}
-          </button>
-        </div>
 
-        {/* Description */}
-        <p className="text-xs text-muted-foreground mb-3 line-clamp-2 flex-1">
-          {model.description}
-        </p>
-
-        {/* Capabilities and model ID */}
-        <div className="space-y-2">
-          <div className="flex flex-wrap gap-1">
-            {model.architecture?.input_modalities?.slice(0, 3).map((mod: string) => (
-              <div key={mod} className="flex items-center gap-1 bg-muted/50 rounded-full px-2 py-1">
-                <span className="text-xs">{getCapabilityIcon(mod)}</span>
-              </div>
-            ))}
+          <div className="text-foreground dark:text-foreground opacity-0 group-data-[active=true]/item:opacity-100">
+            <CheckCircleFillIcon />
           </div>
-          <div className="bg-muted/30 rounded px-2 py-1">
-            <span className="text-xs font-mono text-muted-foreground">{model.id}</span>
-          </div>
-        </div>
-      </div>
+        </button>
+      </DropdownMenuItem>
     );
-  }
-
-  const selectedModel = models.find(m => m.id === selectedModelId);
+  };
 
   return (
-    <div className={cn("relative", className)}>
-      <Button
-        data-testid="model-selector"
-        variant="outline"
-        className="md:px-2 md:h-[34px]"
-        onClick={() => setOpen(!open)}
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger
+        asChild
+        className={cn(
+          'w-fit data-[state=open]:bg-accent data-[state=open]:text-accent-foreground',
+          className,
+        )}
       >
-        {selectedModel?.name || selectedModelId || "Select Model"}
-        <ChevronDownIcon />
-      </Button>
-
-      {open && (
-        <div className="fixed inset-0 z-[100] bg-black/50" onClick={() => setOpen(false)}>
-          <div 
-            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-4xl max-h-[85vh] bg-background border border-border rounded-xl shadow-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="border-b border-border p-4">
-              <div className="flex items-center gap-3 mb-4">
-                <h2 className="text-lg font-semibold">Select Model</h2>
-                <button 
-                  onClick={() => setOpen(false)}
-                  className="ml-auto text-muted-foreground hover:text-foreground"
-                >
-                  ×
-                </button>
-              </div>
-              
-              {/* Search */}
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search models..."
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  autoFocus
-                />
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="overflow-y-auto max-h-[calc(85vh-120px)] p-4">
-              {loading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading models...</div>
-              ) : (
-                <>
-                  {/* Favorites */}
-                  {favoriteModels.length > 0 && (
-                    <div className="mb-8">
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className="text-lg">⭐</span>
-                        <h3 className="font-semibold text-lg">Favorites</h3>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                        {favoriteModels.map(model => renderModelCard(model, true))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Others grouped by provider */}
-                  <div>
-                    <h3 className="font-semibold text-lg mb-4">Others</h3>
-                    {Object.entries(groupedModels).map(([provider, providerModels]) => (
-                      <div key={provider} className="mb-6">
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="text-lg">{getProviderIcon(provider)}</span>
-                          <h4 className="font-medium capitalize">{provider}</h4>
-                          <span className="text-sm text-muted-foreground">({providerModels.length})</span>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                          {providerModels.slice(0, 8).map(model => renderModelCard(model, true))}
-                        </div>
-                        {providerModels.length > 8 && (
-                          <div className="text-center mt-3">
-                            <span className="text-sm text-muted-foreground">
-                              +{providerModels.length - 8} more models
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  {filteredModels.length === 0 && !loading && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No models found matching your search.
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
+        <Button variant="outline" className="md:px-2 md:h-[34px]">
+          {optimisticModelId}
+          <ChevronDownIcon />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-[320px] max-h-[400px] overflow-y-auto p-0">
+        <div className="p-2 sticky top-0 bg-popover z-10">
+          <Input
+            placeholder="Search models..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8 text-sm"
+          />
         </div>
-      )}
-    </div>
+        {favoriteModels.length > 0 && (
+          <div>
+            <div className="px-2 py-1 text-xs text-muted-foreground">Favorites</div>
+            {favoriteModels.map(renderItem)}
+          </div>
+        )}
+        {otherModels.length > 0 && (
+          <div>
+            {favoriteModels.length > 0 && (
+              <div className="px-2 pt-2 pb-1 text-xs text-muted-foreground">Others</div>
+            )}
+            {otherModels.map(renderItem)}
+          </div>
+        )}
+        {filteredModels.length === 0 && (
+          <div className="p-4 text-sm text-muted-foreground">No models found</div>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
