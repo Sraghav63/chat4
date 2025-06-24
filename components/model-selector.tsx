@@ -1,3 +1,8 @@
+import React, { useEffect, useState } from 'react';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from './ui/select';
+import { cn, fetcher } from '@/lib/utils';
+import type { Session } from 'next-auth';
+
 // Get model icon based on provider and model name
 const getModelIcon = (modelId: string, modelName: string) => {
   const provider = modelId.split('/')[0].toLowerCase();
@@ -126,5 +131,79 @@ const getModelIcon = (modelId: string, modelName: string) => {
     <div className="w-8 h-8 rounded-lg bg-gray-600 flex items-center justify-center text-white text-xs font-medium">
       {provider.charAt(0).toUpperCase()}
     </div>
+  );
+};
+
+interface ModelSelectorProps {
+  session: Session;
+  selectedModelId: string;
+  onSelect: (id: string) => void;
+  className?: string;
+}
+
+interface ModelInfo {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export const ModelSelector: React.FC<ModelSelectorProps> = ({
+  session,
+  selectedModelId,
+  onSelect,
+  className,
+}) => {
+  const [models, setModels] = useState<ModelInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    fetcher('/api/openrouter/models')
+      .then((data) => {
+        // OpenRouter returns { data: ModelInfo[] }
+        setModels(data.data || []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError('Failed to load models');
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return <div className={cn('min-w-[180px]', className)}>Loading models...</div>;
+  }
+  if (error) {
+    return <div className={cn('min-w-[180px] text-red-500', className)}>{error}</div>;
+  }
+
+  const selected = models.find((m) => m.id === selectedModelId) || models[0];
+
+  return (
+    <Select
+      value={selected?.id}
+      onValueChange={onSelect}
+    >
+      <SelectTrigger className={cn('min-w-[180px]', className)}>
+        <div className="flex items-center gap-2">
+          {selected && getModelIcon(selected.id, selected.name)}
+          <span>{selected ? selected.name : 'Select model'}</span>
+        </div>
+      </SelectTrigger>
+      <SelectContent>
+        {models.map((model) => (
+          <SelectItem key={model.id} value={model.id} className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              {getModelIcon(model.id, model.name)}
+              <span>{model.name}</span>
+            </div>
+            {model.description && (
+              <div className="text-xs text-muted-foreground ml-2">{model.description}</div>
+            )}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 };
