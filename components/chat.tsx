@@ -45,6 +45,20 @@ export function Chat({
     initialVisibilityType,
   });
 
+  const [selectedModel, setSelectedModel] = useState(initialChatModel);
+
+  useEffect(() => {
+    const handler = (e: CustomEvent<string>) => {
+      setSelectedModel(e.detail);
+    };
+    // @ts-ignore
+    window.addEventListener('chat-model-changed', handler as any);
+    return () => {
+      // @ts-ignore
+      window.removeEventListener('chat-model-changed', handler as any);
+    };
+  }, []);
+
   const {
     messages,
     setMessages,
@@ -67,11 +81,26 @@ export function Chat({
     experimental_prepareRequestBody: (body) => ({
       id,
       message: body.messages.at(-1),
-      selectedChatModel: initialChatModel,
+      selectedChatModel: selectedModel,
       selectedVisibilityType: visibilityType,
     }),
     onFinish: () => {
       mutate(unstable_serialize(getChatHistoryPaginationKey));
+
+      // attach model id to last assistant message
+      setMessages((prev) => {
+        const updated = [...prev];
+        const lastAssistantIndex = updated
+          .map((m) => m.role)
+          .lastIndexOf('assistant');
+        if (lastAssistantIndex !== -1) {
+          updated[lastAssistantIndex] = {
+            ...(updated[lastAssistantIndex] as any),
+            modelId: selectedModel,
+          } as any;
+        }
+        return updated;
+      });
     },
     onError: (error) => {
       if (error instanceof ChatSDKError) {
@@ -121,7 +150,7 @@ export function Chat({
       <div className="flex flex-col min-w-0 h-dvh bg-background">
         <ChatHeader
           chatId={id}
-          selectedModelId={initialChatModel}
+          selectedModelId={selectedModel}
           selectedVisibilityType={initialVisibilityType}
           isReadonly={isReadonly}
           session={session}

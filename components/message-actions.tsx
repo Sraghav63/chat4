@@ -4,7 +4,7 @@ import { useCopyToClipboard } from 'usehooks-ts';
 
 import type { Vote } from '@/lib/db/schema';
 
-import { CopyIcon, ThumbDownIcon, ThumbUpIcon } from './icons';
+import { CopyIcon, ThumbDownIcon, ThumbUpIcon, GlobeIcon } from './icons';
 import { Button } from './ui/button';
 import {
   Tooltip,
@@ -35,7 +35,19 @@ export function PureMessageActions({
 
   return (
     <TooltipProvider delayDuration={0}>
-      <div className="flex flex-row gap-2">
+      <div className="flex flex-row gap-2 items-center">
+        {'modelId' in message && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="px-2 py-0.5 rounded-md text-xs bg-muted text-muted-foreground flex items-center gap-1">
+                {(message as any).modelId?.replace(/^.*\//, '')}
+                <GlobeIcon size={12} />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Model: {(message as any).modelId}</TooltipContent>
+          </Tooltip>
+        )}
+
         <Tooltip>
           <TooltipTrigger asChild>
             <Button

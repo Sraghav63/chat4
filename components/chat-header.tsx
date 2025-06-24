@@ -59,6 +59,9 @@ function PureChatHeader({
         <ModelSelector
           session={session}
           selectedModelId={selectedModelId}
+          onSelect={(id) => {
+            window.dispatchEvent(new CustomEvent('chat-model-changed', { detail: id }));
+          }}
           className="order-1 md:order-2"
         />
       )}

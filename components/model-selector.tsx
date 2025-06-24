@@ -38,10 +38,12 @@ const FAVORITE_IDS = [
 export function ModelSelector({
   session,
   selectedModelId,
+  onSelect,
   className,
 }: {
   session: Session;
   selectedModelId: string;
+  onSelect?: (id: string) => void;
 } & React.ComponentProps<typeof Button>) {
   const [open, setOpen] = useState(false);
   const [optimisticModelId, setOptimisticModelId] =
@@ -80,6 +82,7 @@ export function ModelSelector({
           startTransition(() => {
             setOptimisticModelId(id);
             saveChatModelAsCookie(id);
+            onSelect?.(id);
           });
         }}
         data-active={id === optimisticModelId}
