@@ -33,9 +33,9 @@ const FAVORITE_IDS = [
 ];
 
 const DEFAULT_IDS = [
-  'openai/gpt-4.1',
+  'openai/gpt-4o',
   'google/gemini-2.5-flash-lite-preview-06-17',
-  'x-ai/grok-3-mini-beta',
+  'xai/grok-3-mini',
   'meta/llama-4-maverick',
   'openrouter/o4-mini',
   'google/gemini-2.5-pro',
@@ -55,7 +55,7 @@ const providerSlug = (id: string) => {
     deepseek: 'deepseek',
     groq: 'groq',
     perplexity: 'perplexity',
-    xai: 'x.ai',
+    xai: 'x',
   };
   return map[id] ?? id;
 };
@@ -68,7 +68,7 @@ const prettyName = (id: string) => {
   const withoutProvider = id.includes('/') ? id.split('/')[1] : id;
   return withoutProvider
     .replace(/[-_]/g, ' ')
-    .replace(/\b(gpt|llama|sonnet|flash|mini|max|nano|opus)\b/gi, (m) => m.toUpperCase())
+    .replace(/\b(gpt|llama|sonnet|flash|mini|max|nano|opus|maverick)\b/gi, (m) => m.charAt(0).toUpperCase() + m.slice(1).toLowerCase())
     .replace(/\b([a-z])/g, (m) => m.toUpperCase());
 };
 

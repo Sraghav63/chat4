@@ -25,7 +25,7 @@ const providerSlug = (id: string) => {
     deepseek: 'deepseek',
     groq: 'groq',
     perplexity: 'perplexity',
-    'x-ai': 'x',
+    xai: 'x',
   };
   return map[id] ?? id;
 };
