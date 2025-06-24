@@ -11,7 +11,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { CheckCircleFillIcon, ChevronDownIcon, MetaLogo, XaiLogo } from './icons';
+import {
+  CheckCircleFillIcon,
+  ChevronDownIcon,
+  MetaLogo,
+  XaiLogo,
+  StarIcon,
+  StarFillIcon,
+} from './icons';
 import type { Session } from 'next-auth';
 
 type OpenRouterModel = {
@@ -62,31 +69,47 @@ const providerSlug = (id: string) => {
 
 const getProviderIcon = (provider: string) => {
   provider = provider.toLowerCase();
-  if (provider === 'meta') return <MetaLogo size={14} />;
-  if (provider === 'xai' || provider === 'x-ai') return <XaiLogo size={14} />;
+  if (provider === 'meta')
+    return (
+      <img
+        src="https://huggingface.co/spaces/llama2/community/blob/main/llama2-logo.svg"
+        alt="Llama"
+        width={20}
+        height={20}
+        className="rounded opacity-80"
+        style={{ background: 'white' }}
+      />
+    );
+  if (provider === 'xai' || provider === 'x-ai')
+    return (
+      <img
+        src="https://huggingface.co/spaces/grok/Grok/blob/main/grok-logo.svg"
+        alt="Grok"
+        width={20}
+        height={20}
+        className="rounded opacity-80"
+        style={{ background: 'white' }}
+      />
+    );
   if (provider === 'deepseek')
     return (
       <img
         src="https://cdn.jsdelivr.net/gh/lobehub/assets/icons/deepseek-min.svg"
         alt={provider}
-        width={14}
-        height={14}
+        width={20}
+        height={20}
         className="rounded opacity-80"
-        onError={(e) => {
-          e.currentTarget.style.display = 'none';
-        }}
+        style={{ background: 'white' }}
       />
     );
   return (
     <img
       src={`https://cdn.simpleicons.org/${providerSlug(provider)}/ffffff`}
       alt={provider}
-      width={14}
-      height={14}
+      width={20}
+      height={20}
       className="rounded opacity-80"
-      onError={(e) => {
-        e.currentTarget.style.display = 'none';
-      }}
+      style={{ background: 'white' }}
     />
   );
 };
@@ -195,15 +218,24 @@ export function ModelSelector({
         onContextMenu={(e) => {
           e.preventDefault();
           toggleFav(id);
+          setLocalFav((prev) =>
+            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+          );
         }}
         className={cn(
-          'relative flex flex-col items-start justify-between p-3 rounded-lg border border-muted/20 hover:border-primary focus:border-primary transition data-[active=true]:border-primary',
+          'relative flex flex-col items-start justify-between rounded-lg border border-muted/20 hover:border-primary focus:border-primary transition data-[active=true]:border-primary',
+          'w-[144px] h-[180px] p-2 m-2',
           {
             'outline outline-1 outline-primary': id === optimisticModelId,
           },
         )}
         data-active={id === optimisticModelId}
       >
+        {/* highlight border if favorite */}
+        {allFavIds.has(id) && (
+          <span className="absolute inset-0 pointer-events-none rounded-lg border-2 border-yellow-400" style={{ zIndex: 1 }} />
+        )}
+
         {/* provider icon */}
         <span className="absolute top-1 right-1">{getProviderIcon(provider)}</span>
 
@@ -237,7 +269,8 @@ export function ModelSelector({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
-        className="w-[480px] max-h-[500px] overflow-y-auto p-0"
+        className="w-auto max-h-[600px] overflow-y-auto p-0"
+        style={{ minWidth: 0 }}
       >
         <div className="p-2 sticky top-0 bg-popover z-10">
           <Input
@@ -250,7 +283,7 @@ export function ModelSelector({
         {favouriteModels.length > 0 && (
           <div>
             <div className="px-2 py-1 text-xs text-muted-foreground">Favourites</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-2">
+            <div className="grid grid-cols-6 gap-2 p-2">
               {favouriteModels.map(renderCard)}
             </div>
           </div>
@@ -258,7 +291,7 @@ export function ModelSelector({
         {providerGroups.map(([provider, models]) => (
           <div key={provider}>
             <div className="px-2 py-1 text-xs text-muted-foreground capitalize">{provider}</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-2">
+            <div className="grid grid-cols-6 gap-2 p-2">
               {models.map(renderCard)}
             </div>
           </div>
