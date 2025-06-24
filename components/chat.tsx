@@ -2,7 +2,7 @@
 
 import type { Attachment, UIMessage } from 'ai';
 import { useChat } from '@ai-sdk/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { ChatHeader } from '@/components/chat-header';
 import type { Vote } from '@/lib/db/schema';
@@ -46,6 +46,7 @@ export function Chat({
   });
 
   const [selectedModel, setSelectedModel] = useState(initialChatModel);
+  const requestModelRef = useRef<string>(initialChatModel);
 
   useEffect(() => {
     const handler = (e: CustomEvent<string>) => {
@@ -78,12 +79,16 @@ export function Chat({
     sendExtraMessageFields: true,
     generateId: generateUUID,
     fetch: fetchWithErrorHandlers,
-    experimental_prepareRequestBody: (body) => ({
-      id,
-      message: body.messages.at(-1),
-      selectedChatModel: selectedModel,
-      selectedVisibilityType: visibilityType,
-    }),
+    experimental_prepareRequestBody: (body) => {
+      requestModelRef.current = selectedModel;
+
+      return {
+        id,
+        message: body.messages.at(-1),
+        selectedChatModel: selectedModel,
+        selectedVisibilityType: visibilityType,
+      };
+    },
     onFinish: () => {
       mutate(unstable_serialize(getChatHistoryPaginationKey));
 
@@ -96,19 +101,37 @@ export function Chat({
         if (lastAssistantIndex !== -1) {
           updated[lastAssistantIndex] = {
             ...(updated[lastAssistantIndex] as any),
-            modelId: selectedModel,
+            modelId: requestModelRef.current,
           } as any;
         }
         return updated;
       });
     },
     onError: (error) => {
+      // Always stop the streaming state to prevent UI from stalling
+      stop();
+
+      let messageText = 'Something went wrong. Please try again.';
       if (error instanceof ChatSDKError) {
-        toast({
-          type: 'error',
-          description: error.message,
-        });
+        messageText = String(error.cause ?? error.message);
+      } else if (error instanceof Error && error.message) {
+        messageText = error.message;
       }
+
+      toast({
+        type: 'error',
+        description: messageText,
+      });
+
+      // Append an assistant message with the error so users can see it in-line
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: generateUUID(),
+          role: 'assistant',
+          parts: [{ type: 'text', text: `❗ ${messageText}` }],
+        } as any,
+      ]);
     },
   });
 

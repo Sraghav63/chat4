@@ -223,11 +223,7 @@ export async function saveMessages({
 
 export async function getMessagesByChatId({ id }: { id: string }) {
   try {
-    return await db
-      .select()
-      .from(message)
-      .where(eq(message.chatId, id))
-      .orderBy(asc(message.createdAt));
+    return await db.select().from(message).where(eq(message.chatId, id));
   } catch (error) {
     throw new ChatSDKError(
       'bad_request:database',
@@ -538,8 +534,29 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
   }
 }
 
+// Ensure FavouriteModel table exists (for environments where migrations haven't run)
+async function ensureFavouriteModelTable() {
+  // This is a no-op on databases where the table already exists.
+  // Note: Using simple SQL instead of Drizzle builder because we only need a safety net.
+  // The table definition mirrors `favouriteModel` from schema.ts
+  try {
+    // @ts-ignore – depends on specific driver having `execute` method
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS "FavouriteModel" (
+        "userId" uuid NOT NULL,
+        "modelId" varchar(128) NOT NULL,
+        "createdAt" timestamp NOT NULL DEFAULT now(),
+        PRIMARY KEY ("userId", "modelId")
+      );
+    `);
+  } catch (err) {
+    // swallow – if creation fails because of perms we handle at query time later
+  }
+}
+
 export async function getFavouriteModelIdsByUserId({ userId }: { userId: string }) {
   try {
+    await ensureFavouriteModelTable();
     const rows = await db
       .select({ modelId: favouriteModel.modelId })
       .from(favouriteModel)
@@ -558,6 +575,7 @@ export async function toggleFavouriteModel({
   modelId: string;
 }) {
   try {
+    await ensureFavouriteModelTable();
     // Check existence
     const existing = await db
       .select()

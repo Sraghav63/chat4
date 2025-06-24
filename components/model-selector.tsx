@@ -190,6 +190,9 @@ const getModelIcon = (modelId: string, modelName: string) => {
   );
 };
 
+// Re-export helpers so other components can consume the same visual logic
+export { getModelIcon, prettyName };
+
 // Get capability badges for a model
 const getCapabilityBadges = (model: OpenRouterModel) => {
   const badges = [];

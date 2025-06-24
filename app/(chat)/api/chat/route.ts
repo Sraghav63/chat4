@@ -199,10 +199,11 @@ export async function POST(request: Request) {
                       attachments:
                         assistantMessage.experimental_attachments ?? [],
                       createdAt: new Date(),
+                      modelId: selectedChatModel,
                     },
                   ],
                 });
-              } catch (_) {
+              } catch (error) {
                 console.error('Failed to save chat');
               }
             }

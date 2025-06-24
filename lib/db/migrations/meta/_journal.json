@@ -50,6 +50,13 @@
       "when": 1746118166211,
       "tag": "0006_marvelous_frog_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1750790278451,
+      "tag": "0007_talented_ghost_rider",
+      "breakpoints": true
     }
   ]
 }
