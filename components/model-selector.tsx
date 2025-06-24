@@ -30,10 +30,20 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 const FAVORITE_IDS = [
   'openai/gpt-4o',
   'openai/gpt-4o-mini',
-  'google/gemini-pro',
-  'anthropic/claude-3-5-sonnet',
-  'openai/gpt-4o-image-beta',
 ];
+
+const DEFAULT_IDS = [
+  'openai/gpt-4.1',
+  'google/gemini-2.5-flash-lite-preview-06-17',
+  'x-ai/grok-3-mini-beta',
+  'meta/llama-4-maverick',
+  'openrouter/o4-mini',
+  'google/gemini-2.5-pro',
+  'anthropic/claude-4-sonnet',
+  'anthropic/claude-4-opus',
+];
+
+const PROVIDER_ORDER = ['google', 'anthropic', 'openai', 'x-ai', 'meta', 'mistral'];
 
 // Map provider id to simple-icons slug when names differ
 const providerSlug = (id: string) => {
@@ -91,8 +101,22 @@ export function ModelSelector({
     );
   }, [models, search]);
 
-  const favoriteModels = filteredModels.filter((m) => FAVORITE_IDS.includes(m.id));
-  const otherModels = filteredModels.filter((m) => !FAVORITE_IDS.includes(m.id));
+  const defaultModels = filteredModels.filter((m) => DEFAULT_IDS.includes(m.id));
+  const remainingAfterDefaults = filteredModels.filter((m) => !DEFAULT_IDS.includes(m.id));
+
+  // group remaining by provider order
+  const groupedByProvider: Record<string, OpenRouterModel[]> = {};
+  remainingAfterDefaults.forEach((model) => {
+    const provider = model.id.split('/')[0];
+    if (!groupedByProvider[provider]) groupedByProvider[provider] = [];
+    groupedByProvider[provider].push(model);
+  });
+
+  const providerGroups = Object.entries(groupedByProvider).sort((a, b) => {
+    const ia = PROVIDER_ORDER.indexOf(a[0]);
+    const ib = PROVIDER_ORDER.indexOf(b[0]);
+    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+  });
 
   // Automatically close dropdown on outside navigation
   useEffect(() => {
@@ -176,24 +200,22 @@ export function ModelSelector({
             className="h-8 text-sm"
           />
         </div>
-        {favoriteModels.length > 0 && (
+        {defaultModels.length > 0 && (
           <div>
-            <div className="px-2 py-1 text-xs text-muted-foreground">Favorites</div>
+            <div className="px-2 py-1 text-xs text-muted-foreground">Defaults</div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-2">
-              {favoriteModels.map(renderCard)}
+              {defaultModels.map(renderCard)}
             </div>
           </div>
         )}
-        {otherModels.length > 0 && (
-          <div>
-            {favoriteModels.length > 0 && (
-              <div className="px-2 pt-2 pb-1 text-xs text-muted-foreground">Others</div>
-            )}
+        {providerGroups.map(([provider, models]) => (
+          <div key={provider}>
+            <div className="px-2 py-1 text-xs text-muted-foreground capitalize">{provider}</div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-2">
-              {otherModels.map(renderCard)}
+              {models.map(renderCard)}
             </div>
           </div>
-        )}
+        ))}
         {filteredModels.length === 0 && (
           <div className="p-4 text-sm text-muted-foreground">No models found</div>
         )}
