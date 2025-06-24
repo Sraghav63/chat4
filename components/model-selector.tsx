@@ -186,8 +186,16 @@ export function ModelSelector({
           className,
         )}
       >
-        <Button variant="outline" className="md:px-2 md:h-[34px]">
-          {optimisticModelId}
+        <Button variant="outline" className="md:px-2 md:h-[34px] gap-2 flex items-center">
+          <img
+            src={getIconUrl(optimisticModelId.split('/')[0])}
+            alt="icon"
+            width={14}
+            height={14}
+            className="opacity-80 rounded"
+            onError={(e)=>{e.currentTarget.style.display='none';}}
+          />
+          <span className="truncate max-w-[120px] text-left">{prettyName(optimisticModelId)}</span>
           <ChevronDownIcon />
         </Button>
       </DropdownMenuTrigger>

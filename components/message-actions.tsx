@@ -4,7 +4,7 @@ import { useCopyToClipboard } from 'usehooks-ts';
 
 import type { Vote } from '@/lib/db/schema';
 
-import { CopyIcon, ThumbDownIcon, ThumbUpIcon, GlobeIcon } from './icons';
+import { CopyIcon, ThumbDownIcon, ThumbUpIcon } from './icons';
 import { Button } from './ui/button';
 import {
   Tooltip,
@@ -15,6 +15,23 @@ import {
 import { memo } from 'react';
 import equal from 'fast-deep-equal';
 import { toast } from 'sonner';
+
+const providerSlug = (id: string) => {
+  const map: Record<string, string> = {
+    openai: 'openai',
+    anthropic: 'anthropic',
+    google: 'google',
+    meta: 'meta',
+    deepseek: 'deepseek',
+    groq: 'groq',
+    perplexity: 'perplexity',
+    'x-ai': 'x',
+  };
+  return map[id] ?? id;
+};
+
+const getIconUrl = (provider: string) =>
+  `https://cdn.simpleicons.org/${providerSlug(provider)}/ffffff`;
 
 export function PureMessageActions({
   chatId,
@@ -41,7 +58,14 @@ export function PureMessageActions({
             <TooltipTrigger asChild>
               <span className="px-2 py-0.5 rounded-md text-xs bg-muted text-muted-foreground flex items-center gap-1">
                 {(message as any).modelId?.replace(/^.*\//, '')}
-                <GlobeIcon size={12} />
+                <img
+                  src={getIconUrl((message as any).modelId.split('/')[0])}
+                  alt="icon"
+                  width={12}
+                  height={12}
+                  className="rounded"
+                  onError={(e)=>{e.currentTarget.style.display='none';}}
+                />
               </span>
             </TooltipTrigger>
             <TooltipContent>Model: {(message as any).modelId}</TooltipContent>
