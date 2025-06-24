@@ -54,157 +54,142 @@ const DEFAULT_IDS = [
 
 const PROVIDER_ORDER = ['google', 'anthropic', 'openai', 'x-ai', 'meta', 'mistral', 'deepseek'];
 
-// Get model icon based on provider and model name
+const ICON_CONTAINER_CLASSES = "w-6 h-6 rounded-lg flex items-center justify-center";
+
 const getModelIcon = (modelId: string, modelName: string) => {
   const provider = modelId.split('/')[0].toLowerCase();
   const name = modelName.toLowerCase();
-  
+
+  const commonImgProps = {
+    width: 24,
+    height: 24,
+    className: "text-foreground",
+    style: { filter: 'brightness(0) invert(1)' } as React.CSSProperties,
+  } as const;
+
   // Google models
   if (provider === 'google' || name.includes('gemini')) {
     return (
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center">
-      <img
-        src="https://0pvg75gf2p.ufs.sh/f/uIkPOAEEjnXHgQQZCOIu0dqnMr6CPXQmtESiZog37OkpDyA2"
-        alt="Anthropic"
-        width={24}
-        height={24}
-        className="text-foreground"
-        style={{ filter: 'brightness(0) invert(1)' }} // This makes it white in dark mode, black in light mode
-      />
-    </div>
+      <div className={ICON_CONTAINER_CLASSES}>
+        <img
+          src="https://0pvg75gf2p.ufs.sh/f/uIkPOAEEjnXHgQQZCOIu0dqnMr6CPXQmtESiZog37OkpDyA2"
+          alt="Google Gemini"
+          {...commonImgProps}
+        />
+      </div>
     );
   }
-  
+
   // OpenAI models
   if (provider === 'openai' || name.includes('gpt')) {
     return (
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center">
-      <img
-        src="https://cdn.brandfetch.io/idR3duQxYl/theme/light/symbol.svg?c=1dxbfHSJFAPEGdCLU4o5B"
-        alt="Anthropic"
-        width={26}
-        height={26}
-        className="text-foreground"
-        style={{ filter: 'brightness(0) invert(1)' }} // This makes it white in dark mode, black in light mode
-      />
-    </div>
+      <div className={ICON_CONTAINER_CLASSES}>
+        <img
+          src="https://cdn.brandfetch.io/idR3duQxYl/theme/light/symbol.svg?c=1dxbfHSJFAPEGdCLU4o5B"
+          alt="OpenAI"
+          {...commonImgProps}
+        />
+      </div>
     );
   }
-  
+
   // Anthropic models - "A" logo
   if (provider === 'anthropic' || name.includes('claude')) {
     return (
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center">
-      <img
-        src="https://cdn.brandfetch.io/idmJWF3N06/theme/light/symbol.svg?c=1dxbfHSJFAPEGdCLU4o5B"
-        alt="Anthropic"
-        width={24}
-        height={24}
-        className="text-foreground"
-        style={{ filter: 'brightness(0) invert(1)' }} // This makes it white in dark mode, black in light mode
-      />
-    </div>
+      <div className={ICON_CONTAINER_CLASSES}>
+        <img
+          src="https://cdn.brandfetch.io/idmJWF3N06/theme/light/symbol.svg?c=1dxbfHSJFAPEGdCLU4o5B"
+          alt="Anthropic"
+          {...commonImgProps}
+        />
+      </div>
     );
   }
-  
+
   // XAI/Grok models - "x1" logo
   if (provider === 'xai' || provider === 'x-ai' || name.includes('grok')) {
     return (
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center">
-      <img
-        src="https://cdn.brandfetch.io/iddjpnb3_W/theme/light/logo.svg?c=1dxbfHSJFAPEGdCLU4o5B"
-        alt="Anthropic"
-        width={22}
-        height={22}
-        className="text-foreground"
-        style={{ filter: 'brightness(0) invert(1)' }} // This makes it white in dark mode, black in light mode
-      />
-    </div>
+      <div className={ICON_CONTAINER_CLASSES}>
+        <img
+          src="https://cdn.brandfetch.io/iddjpnb3_W/theme/light/logo.svg?c=1dxbfHSJFAPEGdCLU4o5B"
+          alt="XAI / Grok"
+          {...commonImgProps}
+        />
+      </div>
     );
   }
-  
+
   // DeepSeek models - whale logo
   if (provider === 'deepseek' || name.includes('deepseek')) {
     return (
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center">
-      <img
-        src="https://0pvg75gf2p.ufs.sh/f/uIkPOAEEjnXH9jkW4t3skoMtQ5E1lyJgGPSwKB32iIb4FAuC"
-        alt="Anthropic"
-        width={24}
-        height={24}
-        className="text-foreground"
-        style={{ filter: 'brightness(0) invert(1)' }} // This makes it white in dark mode, black in light mode
-      />
-    </div>
+      <div className={ICON_CONTAINER_CLASSES}>
+        <img
+          src="https://0pvg75gf2p.ufs.sh/f/uIkPOAEEjnXH9jkW4t3skoMtQ5E1lyJgGPSwKB32iIb4FAuC"
+          alt="DeepSeek"
+          {...commonImgProps}
+        />
+      </div>
     );
   }
-  
+
   // Meta/Llama models - infinity symbol
   if (provider === 'meta' || name.includes('llama')) {
     return (
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center">
-      <img
-        src="https://0pvg75gf2p.ufs.sh/f/uIkPOAEEjnXH4bqFwG80t1vqfwoBCU7LFKzhaMdiYlxI2cgE"
-        alt="Anthropic"
-        width={24}
-        height={24}
-        className="text-foreground"
-        style={{ filter: 'brightness(0) invert(1)' }} // This makes it white in dark mode, black in light mode
-      />
-    </div>
+      <div className={ICON_CONTAINER_CLASSES}>
+        <img
+          src="https://0pvg75gf2p.ufs.sh/f/uIkPOAEEjnXH4bqFwG80t1vqfwoBCU7LFKzhaMdiYlxI2cgE"
+          alt="Meta / Llama"
+          {...commonImgProps}
+        />
+      </div>
     );
   }
-  
+
   // Perplexity models - infinity circle logo
   if (provider === 'perplexity' || name.includes('perplexity')) {
     return (
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center">
-      <img
-        src="https://cdn.brandfetch.io/idNdawywEZ/w/800/h/800/theme/light/idpU_bxbjJ.png?c=1dxbfHSJFAPEGdCLU4o5B"
-        alt="Anthropic"
-        width={24}
-        height={24}
-        className="text-foreground"
-        style={{ filter: 'brightness(0) invert(1)' }} // This makes it white in dark mode, black in light mode
-      />
-    </div>
+      <div className={ICON_CONTAINER_CLASSES}>
+        <img
+          src="https://cdn.brandfetch.io/idNdawywEZ/w/800/h/800/theme/light/idpU_bxbjJ.png?c=1dxbfHSJFAPEGdCLU4o5B"
+          alt="Perplexity"
+          {...commonImgProps}
+        />
+      </div>
     );
   }
-  
+
   // Mistral models - castle/tower logo
   if (provider === 'mistral' || name.includes('mistral')) {
     return (
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center">
-      <img
-        src="https://0pvg75gf2p.ufs.sh/f/uIkPOAEEjnXH2iPLfNmqLthPf8gCkvnVibODKuxWQ4SewZYF"
-        alt="Anthropic"
-        width={24}
-        height={24}
-        className="text-foreground"
-        style={{ filter: 'brightness(0) invert(1)' }} // This makes it white in dark mode, black in light mode
-      />
-    </div>
+      <div className={ICON_CONTAINER_CLASSES}>
+        <img
+          src="https://0pvg75gf2p.ufs.sh/f/uIkPOAEEjnXH2iPLfNmqLthPf8gCkvnVibODKuxWQ4SewZYF"
+          alt="Mistral"
+          {...commonImgProps}
+        />
+      </div>
     );
   }
-  
+
   // Groq models
   if (provider === 'groq' || name.includes('groq')) {
     return (
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+      <div className={ICON_CONTAINER_CLASSES}>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-foreground">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.5 6L12 10.5 8.5 8 12 5.5 15.5 8zM8.5 16L12 13.5 15.5 16 12 18.5 8.5 16z"/>
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.5 6L12 10.5 8.5 8 12 5.5 15.5 8zM8.5 16L12 13.5 15.5 16 12 18.5 8.5 16z" />
         </svg>
       </div>
     );
   }
-  
+
   // Default fallback
   return (
-    <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground text-xs font-medium">
+    <div className={`${ICON_CONTAINER_CLASSES} bg-muted text-muted-foreground text-xs font-medium`}>
       {provider.charAt(0).toUpperCase()}
     </div>
   );
 };
+
 // Get capability badges for a model
 const getCapabilityBadges = (model: OpenRouterModel) => {
   const badges = [];
@@ -261,14 +246,22 @@ const getCapabilityBadges = (model: OpenRouterModel) => {
 
 // Prettify model name for display
 const prettyName = (id: string, name?: string) => {
-  if (name) return name;
-  
+  const format = (str: string) =>
+    str
+      .replace(/[-_]/g, ' ')
+      // Ensure GPT is always fully capitalised
+      .replace(/gpt/gi, 'GPT')
+      // Capitalise known keywords (except gpt which we handled above)
+      .replace(/\b(llama|sonnet|flash|mini|max|nano|opus|maverick|gemini|claude)\b/gi, (m) =>
+        m.charAt(0).toUpperCase() + m.slice(1).toLowerCase(),
+      )
+      // Title-case remaining words starting with a-z
+      .replace(/\b([a-z])/g, (m) => m.toUpperCase());
+
+  if (name) return format(name);
+
   const withoutProvider = id.includes('/') ? id.split('/')[1] : id;
-  return withoutProvider
-    .replace(/[-_]/g, ' ')
-    .replace(/\b(gpt|llama|sonnet|flash|mini|max|nano|opus|maverick|gemini|claude)\b/gi, 
-      (m) => m.charAt(0).toUpperCase() + m.slice(1).toLowerCase())
-    .replace(/\b([a-z])/g, (m) => m.toUpperCase());
+  return format(withoutProvider);
 };
 
 // Get model subtitle/description
