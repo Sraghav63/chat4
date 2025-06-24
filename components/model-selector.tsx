@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircleFillIcon, ChevronDownIcon } from "./icons";
 import { cn } from "@/lib/utils";
 import type { Session } from "next-auth";
+import { useRouter } from 'next/navigation';
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/models";
 
@@ -79,6 +80,7 @@ export function ModelSelector({
   const [search, setSearch] = useState("");
   const [favorites, setFavs] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     setFavs(getFavorites());
@@ -140,11 +142,10 @@ export function ModelSelector({
     setFavs(favs);
   }
 
-  function handleSelect(id: string) {
-    console.log('Model selected:', id);
+  async function handleSelect(id: string) {
     setOpen(false);
-    saveChatModelAsCookie(id);
-    window.location.reload(); // Force reload to update model everywhere
+    await saveChatModelAsCookie(id);
+    router.refresh();
   }
 
   function renderModelCard(model: OpenRouterModel, isCompact = false) {
@@ -226,9 +227,9 @@ export function ModelSelector({
       </Button>
 
       {open && (
-        <div className="fixed inset-0 z-[9999] bg-black/50" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 z-[100] bg-black/50" onClick={() => setOpen(false)}>
           <div 
-            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-4xl max-h-[85vh] bg-background border border-border rounded-xl shadow-2xl overflow-hidden z-[10000] pointer-events-auto"
+            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-4xl max-h-[85vh] bg-background border border-border rounded-xl shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
