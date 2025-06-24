@@ -69,7 +69,7 @@ interface Metadata {
 export const codeArtifact = new Artifact<'code', Metadata>({
   kind: 'code',
   description:
-    'Useful for code generation; Code execution is only available for python code.',
+    'Useful for code generation; code execution currently runs only for Python, but snippets in any language are welcomed.',
   initialize: async ({ setMetadata }) => {
     setMetadata({
       outputs: [],
