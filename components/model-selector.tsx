@@ -11,14 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import {
-  CheckCircleFillIcon,
-  ChevronDownIcon,
-  MetaLogo,
-  XaiLogo,
-  StarIcon,
-  StarFillIcon,
-} from './icons';
+import { CheckCircleFillIcon, ChevronDownIcon, MetaLogo, XaiLogo } from './icons';
 import type { Session } from 'next-auth';
 
 type OpenRouterModel = {
@@ -211,20 +204,6 @@ export function ModelSelector({
         )}
         data-active={id === optimisticModelId}
       >
-        {/* favourite star */}
-        <span
-          className="absolute top-1 left-1 cursor-pointer"
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleFav(id);
-            setLocalFav((prev) =>
-              prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-            );
-          }}
-        >
-          {allFavIds.has(id) ? <StarFillIcon size={14} /> : <StarIcon size={14} />}
-        </span>
-
         {/* provider icon */}
         <span className="absolute top-1 right-1">{getProviderIcon(provider)}</span>
 
