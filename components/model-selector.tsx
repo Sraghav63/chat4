@@ -7,13 +7,13 @@ import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { CheckCircleFillIcon, ChevronDownIcon } from './icons';
 import type { Session } from 'next-auth';
+import Image from 'next/image';
 
 type OpenRouterModel = {
   id: string;
@@ -34,6 +34,24 @@ const FAVORITE_IDS = [
   'anthropic/claude-3-5-sonnet',
   'openai/gpt-4o-image-beta',
 ];
+
+// Map provider id to simple-icons slug when names differ
+const providerSlug = (id: string) => {
+  const map: Record<string, string> = {
+    openai: 'openai',
+    anthropic: 'anthropic',
+    google: 'google',
+    meta: 'meta',
+    deepseek: 'deepseek',
+    groq: 'groq',
+    perplexity: 'perplexity',
+    xai: 'x.ai',
+  };
+  return map[id] ?? id;
+};
+
+const getIconUrl = (provider: string) =>
+  `https://cdn.simpleicons.org/${providerSlug(provider)}/ffffff`;
 
 export function ModelSelector({
   session,
@@ -72,12 +90,16 @@ export function ModelSelector({
     if (!open) setSearch('');
   }, [open]);
 
-  const renderItem = (model: OpenRouterModel) => {
-    const { id, name, description } = model;
+  const renderCard = (model: OpenRouterModel) => {
+    const { id, name } = model;
+    const provider = id.split('/')[0];
+    const supportsVision = model.architecture?.input_modalities?.includes('image');
+    const badge = supportsVision ? '👁️' : undefined;
+
     return (
-      <DropdownMenuItem
+      <button
         key={id}
-        onSelect={() => {
+        onClick={() => {
           setOpen(false);
           startTransition(() => {
             setOptimisticModelId(id);
@@ -85,25 +107,37 @@ export function ModelSelector({
             onSelect?.(id);
           });
         }}
+        className={cn(
+          'relative flex flex-col items-start justify-between p-3 rounded-lg border border-muted/20 hover:border-primary focus:border-primary transition data-[active=true]:border-primary',
+          {
+            'outline outline-1 outline-primary': id === optimisticModelId,
+          },
+        )}
         data-active={id === optimisticModelId}
-        asChild
       >
-        <button
-          type="button"
-          className="gap-4 group/item flex flex-row justify-between items-center w-full"
-        >
-          <div className="flex flex-col gap-1 items-start text-left">
-            <div>{name || id}</div>
-            <div className="text-xs text-muted-foreground max-w-[220px] truncate">
-              {description}
-            </div>
-          </div>
+        {/* provider icon */}
+        <Image
+          src={getIconUrl(provider)}
+          alt={provider}
+          width={14}
+          height={14}
+          className="absolute top-1 right-1 opacity-70"
+        />
 
-          <div className="text-foreground dark:text-foreground opacity-0 group-data-[active=true]/item:opacity-100">
-            <CheckCircleFillIcon />
+        <span className="text-sm font-medium leading-tight mb-2 truncate w-full text-left">
+          {name || id.replace(`${provider}/`, '')}
+        </span>
+
+        {badge && (
+          <span className="text-xs opacity-80">{badge}</span>
+        )}
+
+        {id === optimisticModelId && (
+          <div className="absolute bottom-1 right-1">
+            <CheckCircleFillIcon size={14} />
           </div>
-        </button>
-      </DropdownMenuItem>
+        )}
+      </button>
     );
   };
 
@@ -121,7 +155,7 @@ export function ModelSelector({
           <ChevronDownIcon />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-[320px] max-h-[400px] overflow-y-auto p-0">
+      <DropdownMenuContent align="start" className="w-[340px] max-h-[500px] overflow-y-auto p-0">
         <div className="p-2 sticky top-0 bg-popover z-10">
           <Input
             placeholder="Search models..."
@@ -133,7 +167,9 @@ export function ModelSelector({
         {favoriteModels.length > 0 && (
           <div>
             <div className="px-2 py-1 text-xs text-muted-foreground">Favorites</div>
-            {favoriteModels.map(renderItem)}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2">
+              {favoriteModels.map(renderCard)}
+            </div>
           </div>
         )}
         {otherModels.length > 0 && (
@@ -141,7 +177,9 @@ export function ModelSelector({
             {favoriteModels.length > 0 && (
               <div className="px-2 pt-2 pb-1 text-xs text-muted-foreground">Others</div>
             )}
-            {otherModels.map(renderItem)}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2">
+              {otherModels.map(renderCard)}
+            </div>
           </div>
         )}
         {filteredModels.length === 0 && (
