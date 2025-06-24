@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { CheckCircleFillIcon, ChevronDownIcon } from './icons';
+import { CheckCircleFillIcon, ChevronDownIcon, GlobeIcon } from './icons';
 import type { Session } from 'next-auth';
 import Image from 'next/image';
 
@@ -52,6 +52,15 @@ const providerSlug = (id: string) => {
 
 const getIconUrl = (provider: string) =>
   `https://cdn.simpleicons.org/${providerSlug(provider)}/ffffff`;
+
+// Prettify model name for display
+const prettyName = (id: string) => {
+  const withoutProvider = id.includes('/') ? id.split('/')[1] : id;
+  return withoutProvider
+    .replace(/[-_]/g, ' ')
+    .replace(/\b(gpt|llama|sonnet|flash|mini|max|nano|opus)\b/gi, (m) => m.toUpperCase())
+    .replace(/\b([a-z])/g, (m) => m.toUpperCase());
+};
 
 export function ModelSelector({
   session,
@@ -116,16 +125,19 @@ export function ModelSelector({
         data-active={id === optimisticModelId}
       >
         {/* provider icon */}
-        <Image
+        <img
           src={getIconUrl(provider)}
           alt={provider}
           width={14}
           height={14}
-          className="absolute top-1 right-1 opacity-70"
+          className="absolute top-1 right-1 opacity-70 rounded"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+          }}
         />
 
-        <span className="text-sm font-medium leading-tight mb-2 truncate w-full text-left">
-          {name || id.replace(`${provider}/`, '')}
+        <span className="text-xs font-medium leading-tight mb-2 line-clamp-2 break-words text-left">
+          {name || prettyName(id)}
         </span>
 
         {badge && (
@@ -155,7 +167,7 @@ export function ModelSelector({
           <ChevronDownIcon />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-[340px] max-h-[500px] overflow-y-auto p-0">
+      <DropdownMenuContent align="start" className="w-[360px] max-h-[500px] overflow-y-auto p-0">
         <div className="p-2 sticky top-0 bg-popover z-10">
           <Input
             placeholder="Search models..."
@@ -167,7 +179,7 @@ export function ModelSelector({
         {favoriteModels.length > 0 && (
           <div>
             <div className="px-2 py-1 text-xs text-muted-foreground">Favorites</div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-2">
               {favoriteModels.map(renderCard)}
             </div>
           </div>
@@ -177,7 +189,7 @@ export function ModelSelector({
             {favoriteModels.length > 0 && (
               <div className="px-2 pt-2 pb-1 text-xs text-muted-foreground">Others</div>
             )}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-2">
               {otherModels.map(renderCard)}
             </div>
           </div>
