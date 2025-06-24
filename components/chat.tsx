@@ -20,6 +20,8 @@ import { useSearchParams } from 'next/navigation';
 import { useChatVisibility } from '@/hooks/use-chat-visibility';
 import { useAutoResume } from '@/hooks/use-auto-resume';
 import { ChatSDKError } from '@/lib/errors';
+import { ModelSelector } from './model-selector';
+import { VisibilitySelector } from './visibility-selector';
 
 export function Chat({
   id,
@@ -119,13 +121,27 @@ export function Chat({
   return (
     <>
       <div className="flex flex-col min-w-0 h-dvh bg-background">
-        <ChatHeader
-          chatId={id}
-          selectedModelId={initialChatModel}
-          selectedVisibilityType={initialVisibilityType}
-          isReadonly={isReadonly}
-          session={session}
-        />
+        <header className="flex sticky top-0 bg-background py-1.5 items-center px-2 md:px-2 gap-2 z-10 border-b">
+          <ChatHeader
+            chatId={id}
+            isReadonly={isReadonly}
+            session={session}
+          />
+          {!isReadonly && (
+            <ModelSelector
+              session={session}
+              selectedModelId={initialChatModel}
+              className="order-1 md:order-2"
+            />
+          )}
+          {!isReadonly && (
+            <VisibilitySelector
+              chatId={id}
+              selectedVisibilityType={initialVisibilityType}
+              className="order-1 md:order-3"
+            />
+          )}
+        </header>
 
         <Messages
           chatId={id}
