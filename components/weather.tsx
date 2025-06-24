@@ -201,16 +201,45 @@ function n(num: number): number {
   return Math.ceil(num);
 }
 
+const PREFERRED_UNIT_KEY = 'weatherPreferredUnit';
+
+type TempUnit = 'C' | 'F';
+
+function cToF(celsius: number): number {
+  return celsius * (9 / 5) + 32;
+}
+
+function maybeConvert(temp: number, unit: TempUnit): number {
+  return unit === 'F' ? cToF(temp) : temp;
+}
+
 export function Weather({
   weatherAtLocation = SAMPLE,
 }: {
   weatherAtLocation?: WeatherAtLocation;
 }) {
+  const [unit, setUnit] = useState<TempUnit>('C');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = window.localStorage.getItem(PREFERRED_UNIT_KEY);
+    if (stored === 'F' || stored === 'C') {
+      setUnit(stored);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(PREFERRED_UNIT_KEY, unit);
+  }, [unit]);
+
+  const currentTemp = maybeConvert(weatherAtLocation.current.temperature_2m, unit);
+
   const currentHigh = Math.max(
-    ...weatherAtLocation.hourly.temperature_2m.slice(0, 24),
+    ...weatherAtLocation.hourly.temperature_2m.slice(0, 24).map((t) => maybeConvert(t, unit)),
   );
   const currentLow = Math.min(
-    ...weatherAtLocation.hourly.temperature_2m.slice(0, 24),
+    ...weatherAtLocation.hourly.temperature_2m.slice(0, 24).map((t) => maybeConvert(t, unit)),
   );
 
   const isDay = isWithinInterval(new Date(weatherAtLocation.current.time), {
@@ -233,20 +262,21 @@ export function Weather({
 
   const hoursToShow = isMobile ? 5 : 6;
 
-  // Find the index of the current time or the next closest time
   const currentTimeIndex = weatherAtLocation.hourly.time.findIndex(
     (time) => new Date(time) >= new Date(weatherAtLocation.current.time),
   );
 
-  // Slice the arrays to get the desired number of items
   const displayTimes = weatherAtLocation.hourly.time.slice(
     currentTimeIndex,
     currentTimeIndex + hoursToShow,
   );
-  const displayTemperatures = weatherAtLocation.hourly.temperature_2m.slice(
+  const displayTemperaturesRaw = weatherAtLocation.hourly.temperature_2m.slice(
     currentTimeIndex,
     currentTimeIndex + hoursToShow,
   );
+  const displayTemperatures = displayTemperaturesRaw.map((t) => maybeConvert(t, unit));
+
+  const unitSymbol = unit === 'F' ? '°F' : '°C';
 
   return (
     <div
@@ -274,12 +304,30 @@ export function Weather({
             )}
           />
           <div className="text-4xl font-medium text-blue-50">
-            {n(weatherAtLocation.current.temperature_2m)}
-            {weatherAtLocation.current_units.temperature_2m}
+            {n(currentTemp)}
+            {unitSymbol}
           </div>
         </div>
 
-        <div className="text-blue-50">{`H:${n(currentHigh)}° L:${n(currentLow)}°`}</div>
+        <div className="text-blue-50">{`H:${n(currentHigh)}${unitSymbol} L:${n(currentLow)}${unitSymbol}`}</div>
+      </div>
+
+      <div className="flex justify-end gap-2 text-sm">
+        {(['C', 'F'] as TempUnit[]).map((u) => (
+          <button
+            key={u}
+            onClick={() => setUnit(u)}
+            className={cx(
+              'px-2 py-1 rounded',
+              {
+                'bg-blue-50 text-blue-400': unit === u,
+                'text-blue-50 bg-transparent hover:bg-white/20': unit !== u,
+              },
+            )}
+          >
+            °{u}
+          </button>
+        ))}
       </div>
 
       <div className="flex flex-row justify-between">
@@ -301,7 +349,7 @@ export function Weather({
             />
             <div className="text-blue-50 text-sm">
               {n(displayTemperatures[index])}
-              {weatherAtLocation.hourly_units.temperature_2m}
+              {unitSymbol}
             </div>
           </div>
         ))}

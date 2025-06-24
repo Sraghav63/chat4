@@ -223,7 +223,11 @@ export async function saveMessages({
 
 export async function getMessagesByChatId({ id }: { id: string }) {
   try {
-    return await db.select().from(message).where(eq(message.chatId, id));
+    return await db
+      .select()
+      .from(message)
+      .where(eq(message.chatId, id))
+      .orderBy(asc(message.createdAt));
   } catch (error) {
     throw new ChatSDKError(
       'bad_request:database',

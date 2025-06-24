@@ -113,6 +113,10 @@ export async function POST(request: Request) {
 
     const previousMessages = await getMessagesByChatId({ id });
 
+    const isMessageSaved = previousMessages.some(
+      (dbMessage) => dbMessage.id === message.id,
+    );
+
     const messages = appendClientMessage({
       // @ts-expect-error: todo add type conversion from DBMessage[] to UIMessage[]
       messages: previousMessages,
@@ -128,19 +132,21 @@ export async function POST(request: Request) {
       country,
     };
 
-    await saveMessages({
-      messages: [
-        {
-          chatId: id,
-          id: message.id,
-          role: 'user',
-          parts: message.parts,
-          attachments: message.experimental_attachments ?? [],
-          createdAt: new Date(),
-          modelId: selectedChatModel,
-        },
-      ],
-    });
+    if (!isMessageSaved) {
+      await saveMessages({
+        messages: [
+          {
+            chatId: id,
+            id: message.id,
+            role: 'user',
+            parts: message.parts,
+            attachments: message.experimental_attachments ?? [],
+            createdAt: new Date(),
+            modelId: selectedChatModel,
+          },
+        ],
+      });
+    }
 
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
