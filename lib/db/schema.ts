@@ -168,3 +168,22 @@ export const stream = pgTable(
 );
 
 export type Stream = InferSelectModel<typeof stream>;
+
+// Added table to track users' favourite LLM ids
+export const favouriteModel = pgTable(
+  'FavouriteModel',
+  {
+    userId: uuid('userId')
+      .notNull()
+      .references(() => user.id),
+    modelId: varchar('modelId', { length: 128 }).notNull(),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+  },
+  (table) => {
+    return {
+      pk: primaryKey({ columns: [table.userId, table.modelId] }),
+    };
+  },
+);
+
+export type FavouriteModel = InferSelectModel<typeof favouriteModel>;

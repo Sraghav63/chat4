@@ -56,6 +56,7 @@ const providerSlug = (id: string) => {
     groq: 'groq',
     perplexity: 'perplexity',
     xai: 'x',
+    'x-ai': 'x',
   };
   return map[id] ?? id;
 };
@@ -63,7 +64,20 @@ const providerSlug = (id: string) => {
 const getProviderIcon = (provider: string) => {
   provider = provider.toLowerCase();
   if (provider === 'meta') return <MetaLogo size={14} />;
-  if (provider === 'xai') return <XaiLogo size={14} />;
+  if (provider === 'xai' || provider === 'x-ai') return <XaiLogo size={14} />;
+  if (provider === 'deepseek')
+    return (
+      <img
+        src="https://cdn.jsdelivr.net/gh/lobehub/assets/icons/deepseek-min.svg"
+        alt={provider}
+        width={14}
+        height={14}
+        className="rounded opacity-80"
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+        }}
+      />
+    );
   return (
     <img
       src={`https://cdn.simpleicons.org/${providerSlug(provider)}/ffffff`}
@@ -116,18 +130,13 @@ export function ModelSelector({
     );
   }, [models, search]);
 
-  // favourites key
-  const FAV_KEY = 'openrouter-favs';
+  // --- FAVOURITES ---
+  const {
+    data: favData,
+    mutate: mutateFav,
+  } = useSWR<{ favorites: string[] }>('/api/model-favorites', fetcher);
 
-  // favourites from localStorage
-  const [favs, setFavs] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      return JSON.parse(localStorage.getItem(FAV_KEY) ?? '[]');
-    } catch {
-      return [];
-    }
-  });
+  const favs: string[] = favData?.favorites ?? [];
 
   const favouriteModels = filteredModels.filter((m) => favs.includes(m.id));
   const remainingAfterFavs = filteredModels.filter((m) => !favs.includes(m.id));
@@ -151,12 +160,17 @@ export function ModelSelector({
     if (!open) setSearch('');
   }, [open]);
 
-  const toggleFav = (id: string) => {
-    setFavs((prev) => {
-      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
-      localStorage.setItem(FAV_KEY, JSON.stringify(next));
-      return next;
-    });
+  const toggleFav = async (id: string) => {
+    try {
+      await fetch('/api/model-favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modelId: id }),
+      });
+      mutateFav();
+    } catch (error) {
+      console.error('Failed to toggle favourite', error);
+    }
   };
 
   const renderCard = (model: OpenRouterModel) => {
@@ -189,7 +203,7 @@ export function ModelSelector({
         {/* provider icon */}
         <span className="absolute top-1 right-1">{getProviderIcon(provider)}</span>
 
-        <span className="text-xs font-medium leading-tight mb-2 line-clamp-2 break-words text-left">
+        <span className="text-xs font-medium leading-tight mb-2 break-words text-left">
           {name || prettyName(id)}
         </span>
 
@@ -217,7 +231,10 @@ export function ModelSelector({
           <ChevronDownIcon />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-[360px] max-h-[500px] overflow-y-auto p-0">
+      <DropdownMenuContent
+        align="start"
+        className="w-[480px] max-h-[500px] overflow-y-auto p-0"
+      >
         <div className="p-2 sticky top-0 bg-popover z-10">
           <Input
             placeholder="Search models..."
@@ -229,7 +246,7 @@ export function ModelSelector({
         {favouriteModels.length > 0 && (
           <div>
             <div className="px-2 py-1 text-xs text-muted-foreground">Favourites</div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-2">
               {favouriteModels.map(renderCard)}
             </div>
           </div>
@@ -237,7 +254,7 @@ export function ModelSelector({
         {providerGroups.map(([provider, models]) => (
           <div key={provider}>
             <div className="px-2 py-1 text-xs text-muted-foreground capitalize">{provider}</div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-2">
               {models.map(renderCard)}
             </div>
           </div>

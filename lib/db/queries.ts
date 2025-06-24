@@ -27,6 +27,7 @@ import {
   type DBMessage,
   type Chat,
   stream,
+  favouriteModel,
 } from './schema';
 import type { ArtifactKind } from '@/components/artifact';
 import { generateUUID } from '../utils';
@@ -534,5 +535,46 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
       'bad_request:database',
       'Failed to get stream ids by chat id',
     );
+  }
+}
+
+export async function getFavouriteModelIdsByUserId({ userId }: { userId: string }) {
+  try {
+    const rows = await db
+      .select({ modelId: favouriteModel.modelId })
+      .from(favouriteModel)
+      .where(eq(favouriteModel.userId, userId));
+    return rows.map((r) => r.modelId);
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to fetch favourite models');
+  }
+}
+
+export async function toggleFavouriteModel({
+  userId,
+  modelId,
+}: {
+  userId: string;
+  modelId: string;
+}) {
+  try {
+    // Check existence
+    const existing = await db
+      .select()
+      .from(favouriteModel)
+      .where(and(eq(favouriteModel.userId, userId), eq(favouriteModel.modelId, modelId)));
+
+    if (existing.length) {
+      // remove
+      await db
+        .delete(favouriteModel)
+        .where(and(eq(favouriteModel.userId, userId), eq(favouriteModel.modelId, modelId)));
+      return { removed: true };
+    }
+
+    await db.insert(favouriteModel).values({ userId, modelId });
+    return { added: true };
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to toggle favourite model');
   }
 }
