@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { CheckCircleFillIcon, ChevronDownIcon, GlobeIcon } from './icons';
+import { CheckCircleFillIcon, ChevronDownIcon, MetaLogo, XaiLogo } from './icons';
 import type { Session } from 'next-auth';
 import Image from 'next/image';
 
@@ -60,8 +60,23 @@ const providerSlug = (id: string) => {
   return map[id] ?? id;
 };
 
-const getIconUrl = (provider: string) =>
-  `https://cdn.simpleicons.org/${providerSlug(provider)}/ffffff`;
+const getProviderIcon = (provider: string) => {
+  provider = provider.toLowerCase();
+  if (provider === 'meta') return <MetaLogo size={14} />;
+  if (provider === 'xai') return <XaiLogo size={14} />;
+  return (
+    <img
+      src={`https://cdn.simpleicons.org/${providerSlug(provider)}/ffffff`}
+      alt={provider}
+      width={14}
+      height={14}
+      className="rounded opacity-80"
+      onError={(e) => {
+        e.currentTarget.style.display = 'none';
+      }}
+    />
+  );
+};
 
 // Prettify model name for display
 const prettyName = (id: string) => {
@@ -101,12 +116,25 @@ export function ModelSelector({
     );
   }, [models, search]);
 
-  const defaultModels = filteredModels.filter((m) => DEFAULT_IDS.includes(m.id));
-  const remainingAfterDefaults = filteredModels.filter((m) => !DEFAULT_IDS.includes(m.id));
+  // favourites key
+  const FAV_KEY = 'openrouter-favs';
+
+  // favourites from localStorage
+  const [favs, setFavs] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      return JSON.parse(localStorage.getItem(FAV_KEY) ?? '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  const favouriteModels = filteredModels.filter((m) => favs.includes(m.id));
+  const remainingAfterFavs = filteredModels.filter((m) => !favs.includes(m.id));
 
   // group remaining by provider order
   const groupedByProvider: Record<string, OpenRouterModel[]> = {};
-  remainingAfterDefaults.forEach((model) => {
+  remainingAfterFavs.forEach((model) => {
     const provider = model.id.split('/')[0];
     if (!groupedByProvider[provider]) groupedByProvider[provider] = [];
     groupedByProvider[provider].push(model);
@@ -123,11 +151,17 @@ export function ModelSelector({
     if (!open) setSearch('');
   }, [open]);
 
+  const toggleFav = (id: string) => {
+    setFavs((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      localStorage.setItem(FAV_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
   const renderCard = (model: OpenRouterModel) => {
     const { id, name } = model;
     const provider = id.split('/')[0];
-    const supportsVision = model.architecture?.input_modalities?.includes('image');
-    const badge = supportsVision ? '👁️' : undefined;
 
     return (
       <button
@@ -140,6 +174,10 @@ export function ModelSelector({
             onSelect?.(id);
           });
         }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          toggleFav(id);
+        }}
         className={cn(
           'relative flex flex-col items-start justify-between p-3 rounded-lg border border-muted/20 hover:border-primary focus:border-primary transition data-[active=true]:border-primary',
           {
@@ -149,24 +187,11 @@ export function ModelSelector({
         data-active={id === optimisticModelId}
       >
         {/* provider icon */}
-        <img
-          src={getIconUrl(provider)}
-          alt={provider}
-          width={14}
-          height={14}
-          className="absolute top-1 right-1 opacity-70 rounded"
-          onError={(e) => {
-            e.currentTarget.style.display = 'none';
-          }}
-        />
+        <span className="absolute top-1 right-1">{getProviderIcon(provider)}</span>
 
         <span className="text-xs font-medium leading-tight mb-2 line-clamp-2 break-words text-left">
           {name || prettyName(id)}
         </span>
-
-        {badge && (
-          <span className="text-xs opacity-80">{badge}</span>
-        )}
 
         {id === optimisticModelId && (
           <div className="absolute bottom-1 right-1">
@@ -186,16 +211,9 @@ export function ModelSelector({
           className,
         )}
       >
-        <Button variant="outline" className="md:px-2 md:h-[34px] gap-2 flex items-center">
-          <img
-            src={getIconUrl(optimisticModelId.split('/')[0])}
-            alt="icon"
-            width={14}
-            height={14}
-            className="opacity-80 rounded"
-            onError={(e)=>{e.currentTarget.style.display='none';}}
-          />
-          <span className="truncate max-w-[120px] text-left">{prettyName(optimisticModelId)}</span>
+        <Button variant="outline" className="md:px-2 md:h-[34px] gap-2 flex items-center max-w-[180px]">
+          {getProviderIcon(optimisticModelId.split('/')[0])}
+          <span className="truncate text-sm font-medium">{prettyName(optimisticModelId)}</span>
           <ChevronDownIcon />
         </Button>
       </DropdownMenuTrigger>
@@ -208,11 +226,11 @@ export function ModelSelector({
             className="h-8 text-sm"
           />
         </div>
-        {defaultModels.length > 0 && (
+        {favouriteModels.length > 0 && (
           <div>
-            <div className="px-2 py-1 text-xs text-muted-foreground">Defaults</div>
+            <div className="px-2 py-1 text-xs text-muted-foreground">Favourites</div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-2">
-              {defaultModels.map(renderCard)}
+              {favouriteModels.map(renderCard)}
             </div>
           </div>
         )}

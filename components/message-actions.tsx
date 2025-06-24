@@ -15,6 +15,7 @@ import {
 import { memo } from 'react';
 import equal from 'fast-deep-equal';
 import { toast } from 'sonner';
+import { MetaLogo, XaiLogo } from './icons';
 
 const providerSlug = (id: string) => {
   const map: Record<string, string> = {
@@ -32,6 +33,24 @@ const providerSlug = (id: string) => {
 
 const getIconUrl = (provider: string) =>
   `https://cdn.simpleicons.org/${providerSlug(provider)}/ffffff`;
+
+const getProviderIcon = (provider: string) => {
+  provider = provider.toLowerCase();
+  if (provider === 'meta') return <MetaLogo size={12} />;
+  if (provider === 'xai') return <XaiLogo size={12} />;
+  return (
+    <img
+      src={`https://cdn.simpleicons.org/${providerSlug(provider)}/ffffff`}
+      alt={provider}
+      width={12}
+      height={12}
+      className="rounded opacity-80"
+      onError={(e) => {
+        e.currentTarget.style.display = 'none';
+      }}
+    />
+  );
+};
 
 export function PureMessageActions({
   chatId,
@@ -58,14 +77,7 @@ export function PureMessageActions({
             <TooltipTrigger asChild>
               <span className="px-2 py-0.5 rounded-md text-xs bg-muted text-muted-foreground flex items-center gap-1">
                 {(message as any).modelId?.replace(/^.*\//, '')}
-                <img
-                  src={getIconUrl((message as any).modelId.split('/')[0])}
-                  alt="icon"
-                  width={12}
-                  height={12}
-                  className="rounded"
-                  onError={(e)=>{e.currentTarget.style.display='none';}}
-                />
+                {getProviderIcon((message as any).modelId.split('/')[0])}
               </span>
             </TooltipTrigger>
             <TooltipContent>Model: {(message as any).modelId}</TooltipContent>
