@@ -135,7 +135,7 @@ export async function POST(request: Request) {
           const processed = await Promise.all(
             m.experimental_attachments.map(async (att) => {
               if (
-                att.contentType?.startsWith('image/') &&
+                (att.contentType?.startsWith('image/') || att.contentType === 'application/pdf') &&
                 att.url &&
                 !att.url.startsWith('data:')
               ) {

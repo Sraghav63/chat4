@@ -1,19 +1,18 @@
-import Form from 'next/form';
 import { signOut } from '@/app/(auth)/auth';
+import { Button } from '@/components/ui/button';
 
 export const SignOutForm = () => {
   return (
-    <Form
+    <form
       action={async () => {
         'use server';
-        await signOut({
-          redirectTo: '/',
-        });
+        await signOut({ redirectTo: '/' });
       }}
+      className="w-full"
     >
-      <button type="submit" className="w-full">
+      <Button type="submit" variant="destructive" size="lg" className="w-full">
         Sign out
-      </button>
-    </Form>
+      </Button>
+    </form>
   );
 };

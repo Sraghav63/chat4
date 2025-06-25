@@ -141,7 +141,17 @@ function PureMultimodalInput({
 
     // Expensive model confirmation
     const modelId = getSelectedModelId();
-    const selectedModel = allModels?.find((m) => m.id === modelId);
+
+    const selectedModel = allModels.find((m) => m.id === modelId);
+
+    // If user attaches images ensure selected model advertises image support.
+    const hasImages = attachments.some((a) => a.contentType?.startsWith('image/'));
+    const supportsImages = selectedModel?.architecture?.input_modalities?.includes('image');
+    if (hasImages && !supportsImages) {
+      toast.error('The chosen model does not indicate image-input support. Pick a vision-capable model (see model selector) or remove images.');
+      return;
+    }
+
     if (selectedModel) {
       const prompt = parseFloat(selectedModel.pricing?.prompt ?? '0');
       const completion = parseFloat(selectedModel.pricing?.completion ?? '0');
@@ -239,6 +249,84 @@ function PureMultimodalInput({
       scrollToBottom();
     }
   }, [status, scrollToBottom]);
+
+  // Handle pasting images
+  const handlePaste = useCallback(async (event: ClipboardEvent) => {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+
+    const imageFiles = Array.from(items)
+      .filter(item => item.type.startsWith('image/'))
+      .map(item => item.getAsFile())
+      .filter((file): file is File => file !== null);
+
+    if (imageFiles.length === 0) return;
+
+    setUploadQueue(imageFiles.map(file => file.name));
+
+    try {
+      const uploadPromises = imageFiles.map(file => uploadFile(file));
+      const uploadedAttachments = await Promise.all(uploadPromises);
+      const successfullyUploadedAttachments = uploadedAttachments.filter(
+        (attachment) => attachment !== undefined,
+      );
+
+      setAttachments(currentAttachments => [
+        ...currentAttachments,
+        ...successfullyUploadedAttachments,
+      ]);
+    } catch (error) {
+      console.error('Error uploading pasted files!', error);
+    } finally {
+      setUploadQueue([]);
+    }
+  }, [setAttachments, uploadFile]);
+
+  // Handle drag and drop
+  const handleDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback(async (event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const files = Array.from(event.dataTransfer.files)
+      .filter(file => file.type.startsWith('image/'));
+
+    if (files.length === 0) return;
+
+    setUploadQueue(files.map(file => file.name));
+
+    try {
+      const uploadPromises = files.map(file => uploadFile(file));
+      const uploadedAttachments = await Promise.all(uploadPromises);
+      const successfullyUploadedAttachments = uploadedAttachments.filter(
+        (attachment) => attachment !== undefined,
+      );
+
+      setAttachments(currentAttachments => [
+        ...currentAttachments,
+        ...successfullyUploadedAttachments,
+      ]);
+    } catch (error) {
+      console.error('Error uploading dropped files!', error);
+    } finally {
+      setUploadQueue([]);
+    }
+  }, [setAttachments, uploadFile]);
+
+  // Add paste event listener
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    textarea.addEventListener('paste', handlePaste);
+    return () => {
+      textarea.removeEventListener('paste', handlePaste);
+    };
+  }, [handlePaste]);
 
   return (
     <div className="relative w-full flex flex-col gap-4">
@@ -342,6 +430,8 @@ function PureMultimodalInput({
             }
           }
         }}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
       />
 
       <div className="absolute bottom-0 p-2 w-fit flex flex-row justify-start">

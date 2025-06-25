@@ -4,7 +4,6 @@ import { getUserMessageStats } from '@/lib/db/queries';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Card } from '@/components/ui/card';
 import { SignOutForm } from '@/components/sign-out-form';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { getModelIcon } from '@/components/model-icons';
 
@@ -43,9 +42,7 @@ export default async function SettingsPage() {
                 
                 <div>
                   <h3 className="text-sm font-medium mb-4">Account Actions</h3>
-                  <Button variant="destructive" size="lg" className="w-full">
-                    <SignOutForm />
-                  </Button>
+                  <SignOutForm />
                 </div>
               </div>
             </Card>

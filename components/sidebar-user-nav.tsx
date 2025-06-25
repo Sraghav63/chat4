@@ -4,6 +4,7 @@ import Image from 'next/image';
 import type { User } from 'next-auth';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+import { LogIn } from 'lucide-react';
 
 import {
   SidebarMenu,
@@ -38,6 +39,26 @@ export function SidebarUserNav({ user }: { user: User }) {
     );
   }
 
+  // If guest, show Sign In link
+  if (isGuest) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <Link href="/login" className="flex-1">
+            <SidebarMenuButton
+              data-testid="sign-in-nav-button"
+              className="bg-background hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-10 w-full"
+            >
+              <LogIn className="size-6" />
+              <span className="truncate">Sign in</span>
+            </SidebarMenuButton>
+          </Link>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    );
+  }
+
+  // Regular logged-in user
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -54,7 +75,7 @@ export function SidebarUserNav({ user }: { user: User }) {
               className="rounded-full"
             />
             <span data-testid="user-email" className="truncate">
-              {isGuest ? 'Guest' : user?.email}
+              {user?.email}
             </span>
           </SidebarMenuButton>
         </Link>
