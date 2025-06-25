@@ -362,6 +362,7 @@ function PureMultimodalInput({
             append={append}
             chatId={chatId}
             selectedVisibilityType={selectedVisibilityType}
+            isDisabled={session?.user?.type === 'guest'}
           />
         )}
 

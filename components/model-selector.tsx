@@ -42,15 +42,22 @@ const FAVORITE_IDS = [
   'openai/gpt-4o-mini',
 ];
 
+// A small curated set of popular models that renders instantly while the full
+// OpenRouter list is still loading. Keeping this list in-memory means the
+// selector feels snappy even on first visit or cold edge cache.
 const DEFAULT_IDS = [
-  'openai/gpt-4o',
-  'google/gemini-2.5-flash-lite-preview-06-17',
-  'xai/grok-3-mini',
-  'meta/llama-4-maverick',
-  'openrouter/o4-mini',
+  'meta-llama/llama-4-maverick:free',
+  'anthropic/claude-sonnet-4',
+  'google/gemini-2.0-flash-001',
+  'openai/gpt-4.1-mini',
+  'openai/gpt-4.1',
+  'openai/o4-mini',
+  'openai/o4-mini-high',
+  'x-ai/grok-3-mini',
+  'google/gemini-2.5-flash',
   'google/gemini-2.5-pro',
-  'anthropic/claude-4-sonnet',
-  'anthropic/claude-4-opus',
+  'deepseek/deepseek-chat-v3-0324:free',
+  'deepseek/deepseek-r1-0528:free',
 ];
 
 const PROVIDER_ORDER = ['google', 'anthropic', 'openai', 'x-ai', 'meta', 'mistral', 'deepseek'];

@@ -10,12 +10,14 @@ interface SuggestedActionsProps {
   chatId: string;
   append: UseChatHelpers['append'];
   selectedVisibilityType: VisibilityType;
+  isDisabled?: boolean;
 }
 
 function PureSuggestedActions({
   chatId,
   append,
   selectedVisibilityType,
+  isDisabled = false,
 }: SuggestedActionsProps) {
   const suggestedActions = [
     {
@@ -56,7 +58,9 @@ function PureSuggestedActions({
         >
           <Button
             variant="ghost"
+            disabled={isDisabled}
             onClick={async () => {
+              if (isDisabled) return;
               window.history.replaceState({}, '', `/chat/${chatId}`);
 
               append({
@@ -83,6 +87,7 @@ export const SuggestedActions = memo(
     if (prevProps.chatId !== nextProps.chatId) return false;
     if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType)
       return false;
+    if (prevProps.isDisabled !== nextProps.isDisabled) return false;
 
     return true;
   },
