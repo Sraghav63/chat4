@@ -449,7 +449,7 @@ export function ModelSelector({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
-        className="w-[800px] max-h-[600px] overflow-y-auto p-0 bg-popover"
+        className="w-[95vw] md:w-[800px] max-h-[600px] overflow-y-auto p-0 bg-popover"
       >
         {/* Search header */}
         <div className="sticky top-0 bg-popover border-b p-4 z-10">
@@ -485,7 +485,7 @@ export function ModelSelector({
                 </div>
                 <h2 className="text-sm font-medium">Favorites</h2>
               </div>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {favouriteModels.map(renderCard)}
               </div>
             </div>
@@ -497,7 +497,7 @@ export function ModelSelector({
               <h2 className="text-sm font-medium mb-3 capitalize text-muted-foreground">
                 {provider}
               </h2>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {models.map(renderCard)}
               </div>
             </div>
