@@ -48,7 +48,10 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
       createdAt: message.createdAt,
       experimental_attachments:
         (message.attachments as Array<Attachment>) ?? [],
-    }));
+      // Preserve the modelId so the UI can render per-message model badges even
+      // after navigating away or switching models.
+      ...(message.modelId ? { modelId: message.modelId } : {}),
+    })) as any;
   }
 
   const cookieStore = await cookies();
