@@ -13,10 +13,13 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
   useSidebar,
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { MessageCircle } from 'lucide-react';
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
@@ -35,7 +38,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               className="flex flex-row gap-3 items-center"
             >
               <span className="text-lg font-semibold px-2 hover:bg-muted rounded-md cursor-pointer">
-                Chatbot
+                Chat
               </span>
             </Link>
             <Tooltip>
@@ -56,6 +59,20 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               <TooltipContent align="end">New Chat</TooltipContent>
             </Tooltip>
           </div>
+          
+          {/* Enhanced Chats navigation */}
+          <SidebarMenuItem className="mt-2">
+            <SidebarMenuButton asChild>
+              <Link
+                href="/chats"
+                onClick={() => setOpenMobile(false)}
+                className="flex items-center gap-2"
+              >
+                <MessageCircle size={16} />
+                <span>Chats</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>

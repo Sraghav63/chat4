@@ -15,6 +15,9 @@ import {
 } from 'react';
 import { toast } from 'sonner';
 import { useLocalStorage, useWindowSize } from 'usehooks-ts';
+import useSWR from 'swr';
+import { PRICE_THRESHOLDS, type OpenRouterModel } from './model-selector';
+import { fetcher } from '@/lib/utils';
 
 import { ArrowUpIcon, PaperclipIcon, StopIcon } from './icons';
 import { PreviewAttachment } from './preview-attachment';
@@ -112,11 +115,37 @@ function PureMultimodalInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadQueue, setUploadQueue] = useState<Array<string>>([]);
 
+  // Get selected model id from cookie helper
+  const getSelectedModelId = () => {
+    if (typeof document === 'undefined') return '';
+    const match = document.cookie.match(/(^|; )chat-model=([^;]+)/);
+    return match ? decodeURIComponent(match[2]) : '';
+  };
+
+  // Fetch models to get pricing info (same endpoint as model selector)
+  const { data: allModels } = useSWR<OpenRouterModel[]>('/api/openrouter/models', fetcher);
+
   const submitForm = useCallback(() => {
     // Prevent guest users from sending messages
     if (session?.user?.type === 'guest') {
       toast.error('Please log in to send messages');
       return;
+    }
+
+    // Expensive model confirmation
+    const modelId = getSelectedModelId();
+    const selectedModel = allModels?.find((m) => m.id === modelId);
+    if (selectedModel) {
+      const prompt = parseFloat(selectedModel.pricing?.prompt ?? '0');
+      const completion = parseFloat(selectedModel.pricing?.completion ?? '0');
+      const avg = (prompt + completion) / 2;
+      const isExpensive = avg > PRICE_THRESHOLDS.orange; // orange/red levels
+      if (isExpensive) {
+        const confirmSend = window.confirm(
+          `Model ${modelId} is expensive ($${prompt}/1M prompt, $${completion}/1M completion). Are you sure you want to send this message?`,
+        );
+        if (!confirmSend) return;
+      }
     }
 
     window.history.replaceState({}, '', `/chat/${chatId}`);
@@ -140,6 +169,7 @@ function PureMultimodalInput({
     width,
     chatId,
     session,
+    allModels,
   ]);
 
   const uploadFile = async (file: File) => {

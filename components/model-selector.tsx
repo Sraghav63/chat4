@@ -18,6 +18,7 @@ import {
   StarFillIcon,
 } from './icons';
 import type { Session } from 'next-auth';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 
 type OpenRouterModel = {
   id: string;
@@ -55,6 +56,35 @@ const DEFAULT_IDS = [
 const PROVIDER_ORDER = ['google', 'anthropic', 'openai', 'x-ai', 'meta', 'mistral', 'deepseek'];
 
 const ICON_CONTAINER_CLASSES = "w-6 h-6 rounded-lg flex items-center justify-center";
+
+const PRICE_THRESHOLDS = {
+  green: 0.5,
+  yellow: 2,
+  orange: 5,
+};
+
+type PriceLevel = 'green' | 'yellow' | 'orange' | 'red';
+
+const getPriceLevel = (model: OpenRouterModel): PriceLevel => {
+  const prompt = parseFloat(model.pricing?.prompt ?? '0');
+  const completion = parseFloat(model.pricing?.completion ?? '0');
+  const avg = (prompt + completion) / 2;
+
+  if (avg <= PRICE_THRESHOLDS.green) return 'green';
+  if (avg <= PRICE_THRESHOLDS.yellow) return 'yellow';
+  if (avg <= PRICE_THRESHOLDS.orange) return 'orange';
+  return 'red';
+};
+
+const getPriceIndicator = (level: PriceLevel) => {
+  const colorMap: Record<PriceLevel, string> = {
+    green: 'bg-green-500',
+    yellow: 'bg-yellow-400',
+    orange: 'bg-orange-500',
+    red: 'bg-red-600',
+  };
+  return <div className={`w-2 h-2 rounded-full ${colorMap[level]}`} />;
+};
 
 const getModelIcon = (modelId: string, modelName: string) => {
   const provider = modelId.split('/')[0].toLowerCase();
@@ -191,7 +221,7 @@ const getModelIcon = (modelId: string, modelName: string) => {
 };
 
 // Re-export helpers so other components can consume the same visual logic
-export { getModelIcon, prettyName };
+export { getModelIcon, prettyName, PRICE_THRESHOLDS, type OpenRouterModel };
 
 // Get capability badges for a model
 const getCapabilityBadges = (model: OpenRouterModel) => {
@@ -313,8 +343,7 @@ export function ModelSelector({
   );
 
   const favs: string[] = favData?.favorites ?? [];
-  const [localFav, setLocalFav] = useState<string[]>([]);
-  const allFavIds = new Set([...favs, ...localFav]);
+  const allFavIds = new Set(favs);
 
   const favouriteModels = filteredModels.filter((m) => allFavIds.has(m.id));
   const remainingAfterFavs = filteredModels.filter((m) => !allFavIds.has(m.id));
@@ -338,17 +367,31 @@ export function ModelSelector({
   }, [open]);
 
   const toggleFav = async (id: string) => {
-    try {
-      await fetch('/api/model-favorites', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ modelId: id }),
-        credentials: 'include',
-      });
-      mutateFav();
-    } catch (error) {
-      console.error('Failed to toggle favourite', error);
-    }
+    // Optimistic update using SWR mutate
+    mutateFav(
+      async (current) => {
+        const currentList = current?.favorites ?? [];
+        const isFav = currentList.includes(id);
+
+        // Send request in background
+        fetch('/api/model-favorites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ modelId: id }),
+          credentials: 'include',
+        }).catch((err) => {
+          console.error('Failed to toggle favourite', err);
+        });
+
+        // Return updated list optimistically
+        return {
+          favorites: isFav
+            ? currentList.filter((x) => x !== id)
+            : [...currentList, id],
+        } as { favorites: string[] };
+      },
+      { optimisticData: undefined, populateCache: true, rollbackOnError: false, revalidate: false },
+    );
   };
 
   const renderCard = (model: OpenRouterModel) => {
@@ -357,6 +400,8 @@ export function ModelSelector({
     const isFavorite = allFavIds.has(id);
     const capabilities = getCapabilityBadges(model);
     const subtitle = getModelSubtitle(model);
+    const priceLevel = getPriceLevel(model);
+    const priceIndicator = getPriceIndicator(priceLevel);
 
     return (
       <div
@@ -379,9 +424,6 @@ export function ModelSelector({
         onContextMenu={(e) => {
           e.preventDefault();
           toggleFav(id);
-          setLocalFav((prev) =>
-            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-          );
         }}
       >
         {/* Header with icon and favorite */}
@@ -391,9 +433,6 @@ export function ModelSelector({
             onClick={(e) => {
               e.stopPropagation();
               toggleFav(id);
-              setLocalFav((prev) =>
-                prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-              );
             }}
             className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
           >
@@ -419,8 +458,24 @@ export function ModelSelector({
 
         {/* Capabilities and selection indicator */}
         <div className="flex items-center justify-between mt-auto">
-          <div className="flex gap-1">
+          <div className="flex gap-1 items-center">
             {capabilities}
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>{priceIndicator}</TooltipTrigger>
+                <TooltipContent side="top">
+                  <div className="flex flex-col text-xs">
+                    <span className="font-medium capitalize">{priceLevel === 'green' ? 'Cheap' : priceLevel === 'yellow' ? 'Moderate' : priceLevel === 'orange' ? 'Expensive' : 'Premium'}</span>
+                    {model.pricing && (
+                      <>
+                        <span>Prompt: ${model.pricing.prompt}/1M</span>
+                        <span>Completion: ${model.pricing.completion}/1M</span>
+                      </>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           {isSelected && (
             <CheckCircleFillIcon size={16} />
@@ -432,14 +487,13 @@ export function ModelSelector({
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger
-        asChild
-        className={cn(
-          'w-fit data-[state=open]:bg-accent data-[state=open]:text-accent-foreground',
-          className,
-        )}
-      >
-        <Button variant="outline" className="md:px-2 md:h-[34px] gap-2 flex items-center max-w-[180px]">
+      <DropdownMenuTrigger asChild>
+        <Button 
+          variant="outline" 
+          className={cn('md:px-2 md:h-[34px] gap-2 flex items-center max-w-[180px]',
+            className,
+          )}
+        >
           {getModelIcon(optimisticModelId, '')}
           <span className="truncate text-sm font-medium">
             {prettyName(optimisticModelId)}

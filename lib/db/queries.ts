@@ -629,3 +629,73 @@ export async function updateUserTemperatureUnit({
     throw new ChatSDKError('bad_request:database', 'Failed to update user temperature unit');
   }
 }
+
+// new: Search chats by query across title and messages
+export async function searchChatsByQuery({
+  userId,
+  query,
+  limit = 20,
+}: {
+  userId: string;
+  query: string;
+  limit?: number;
+}) {
+  try {
+    const q = `%${query}%`;
+    const results = await client`
+      SELECT DISTINCT ON (c.id)
+        c.id AS "chatId",
+        c.title,
+        m.parts::text AS message_parts,
+        m."createdAt"
+      FROM "Chat" c
+      LEFT JOIN "Message_v2" m ON m."chatId" = c.id
+      WHERE c."userId" = ${userId}
+        AND (
+          c.title ILIKE ${q} OR m.parts::text ILIKE ${q}
+        )
+      ORDER BY c.id, m."createdAt" DESC
+      LIMIT ${limit};
+    `;
+
+    // Map to friendly format and extract a simple snippet
+    return (results as any[]).map((row) => {
+      let snippet = '';
+      try {
+        // parts is JSON array; extract first text piece
+        const partsJson = JSON.parse(row.message_parts ?? '[]');
+        const firstPart = Array.isArray(partsJson) ? partsJson[0]?.text ?? '' : '';
+        snippet = firstPart as string;
+      } catch (_) {
+        snippet = '';
+      }
+
+      return {
+        chatId: row.chatId as string,
+        title: row.title as string,
+        snippet,
+      };
+    });
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to search chats');
+  }
+}
+
+export async function getUserMessageStats({ userId }: { userId: string }) {
+  try {
+    const rows = await client`
+      SELECT m."modelId" AS model_id, COUNT(*)::int AS count
+      FROM "Message_v2" m
+      JOIN "Chat" c ON c.id = m."chatId"
+      WHERE c."userId" = ${userId}
+      GROUP BY m."modelId";
+    `;
+    const total = rows.reduce((acc: number, r: any) => acc + Number(r.count), 0);
+    return {
+      total,
+      perModel: rows.map((r: any) => ({ modelId: r.model_id as string, count: Number(r.count) })),
+    } as { total: number; perModel: Array<{ modelId: string; count: number }> };
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to fetch message stats');
+  }
+}
