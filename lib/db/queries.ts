@@ -687,13 +687,18 @@ export async function getUserMessageStats({ userId }: { userId: string }) {
       SELECT m."modelId" AS model_id, COUNT(*)::int AS count
       FROM "Message_v2" m
       JOIN "Chat" c ON c.id = m."chatId"
-      WHERE c."userId" = ${userId}
+      WHERE c."userId" = ${userId} AND m."modelId" IS NOT NULL
       GROUP BY m."modelId";
     `;
-    const total = rows.reduce((acc: number, r: any) => acc + Number(r.count), 0);
+
+    // Filter any potential nulls (additional safety) and coerce types
+    const validRows = (rows as any[]).filter((r) => r.model_id);
+
+    const total = validRows.reduce((acc: number, r: any) => acc + Number(r.count), 0);
+
     return {
       total,
-      perModel: rows.map((r: any) => ({ modelId: r.model_id as string, count: Number(r.count) })),
+      perModel: validRows.map((r: any) => ({ modelId: String(r.model_id), count: Number(r.count) })),
     } as { total: number; perModel: Array<{ modelId: string; count: number }> };
   } catch (error) {
     throw new ChatSDKError('bad_request:database', 'Failed to fetch message stats');
