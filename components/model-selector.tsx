@@ -327,7 +327,16 @@ export function ModelSelector({
   const [search, setSearch] = useState('');
 
   const { data } = useSWR<{ data: OpenRouterModel[] }>('/api/openrouter/models', fetcher);
-  const models: OpenRouterModel[] = data?.data ?? [];
+  // Use models returned from API if available, otherwise fall back to a minimal
+  // list built from DEFAULT_IDS so users always see something to pick.
+  const models: OpenRouterModel[] = useMemo(() => {
+    if (Array.isArray(data?.data) && data.data.length > 0) {
+      return data.data as OpenRouterModel[];
+    }
+
+    // Build a minimal stand-in list from DEFAULT_IDS so UI never appears empty.
+    return DEFAULT_IDS.map((id) => ({ id, name: id.split('/')[1] ?? id })) as OpenRouterModel[];
+  }, [data]);
 
   const filteredModels = useMemo(() => {
     if (!search.trim()) return models;
