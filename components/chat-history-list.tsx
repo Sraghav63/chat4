@@ -164,7 +164,7 @@ export function ChatHistoryList() {
                 </div>
                 <h3 className="text-xl font-semibold mb-3">No chats found</h3>
                 <p className="text-muted-foreground max-w-md mx-auto">
-                  We couldn't find any conversations containing "{searchTerm}". Try a different search term.
+                  We couldn&apos;t find any conversations containing &quot;{searchTerm}&quot;. Try a different search term.
                 </p>
               </Card>
             ) : (
