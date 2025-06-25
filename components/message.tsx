@@ -20,6 +20,7 @@ import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 const PurePreviewMessage = ({
   chatId,
@@ -44,11 +45,28 @@ const PurePreviewMessage = ({
   const router = useRouter();
 
   const handleBranch = async (messageId: string) => {
-    // TODO: Implement API call to create a new chat branch
-    // For now, just log and show a toast
-    console.log('Branching at message:', messageId);
-    // toast.success('Branched chat! (stub)');
-    // router.push(`/chat/new-chat-id`);
+    try {
+      const branchPromise = fetch('/api/branch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ chatId, messageId }),
+      });
+
+      toast.promise(branchPromise, {
+        loading: 'Creating branch...',
+        success: 'Branched chat created!',
+        error: 'Failed to create branch',
+      });
+
+      const res = await branchPromise;
+      if (!res.ok) return; // error handled by toast.promise
+      const { id: newChatId } = await res.json();
+      router.push(`/chat/${newChatId}`);
+    } catch (error) {
+      toast.error('Failed to create branch');
+    }
   };
 
   return (

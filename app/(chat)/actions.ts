@@ -4,6 +4,8 @@ import { generateText, type UIMessage } from 'ai';
 import { cookies } from 'next/headers';
 import {
   updateChatVisiblityById,
+  getMessageById,
+  deleteMessagesByChatIdAfterTimestamp,
 } from '@/lib/db/queries';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { myProvider } from '@/lib/ai/providers';
@@ -39,4 +41,15 @@ export async function updateChatVisibility({
   visibility: VisibilityType;
 }) {
   await updateChatVisiblityById({ chatId, visibility });
+}
+
+export async function deleteTrailingMessages({ id }: { id: string }) {
+  // Find the message to determine timestamp and chat
+  const [msg] = await getMessageById({ id });
+  if (!msg) return;
+
+  await deleteMessagesByChatIdAfterTimestamp({
+    chatId: msg.chatId,
+    timestamp: new Date(msg.createdAt),
+  });
 }

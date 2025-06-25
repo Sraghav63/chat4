@@ -51,6 +51,7 @@ export function Chat({
 
   useEffect(() => {
     const handler = (e: CustomEvent<string>) => {
+      requestModelRef.current = e.detail;
       setSelectedModel(e.detail);
     };
     // @ts-ignore
@@ -81,14 +82,28 @@ export function Chat({
     generateId: generateUUID,
     fetch: fetchWithErrorHandlers,
     experimental_prepareRequestBody: (body) => {
-      requestModelRef.current = selectedModel;
+      const modelId = requestModelRef.current;
+
+      const uiMsg = body.messages.at(-1);
+
+      if (!uiMsg) return {} as any;
+
+      const textParts = (uiMsg.parts ?? []).filter((p) => p.type === 'text');
+      const contentText = textParts.map((p: any) => p.text).join('\n');
 
       return {
         id,
-        message: body.messages.at(-1),
-        selectedChatModel: selectedModel,
+        message: {
+          id: uiMsg.id,
+          createdAt: uiMsg.createdAt ?? new Date(),
+          role: 'user',
+          content: contentText,
+          parts: textParts,
+          experimental_attachments: uiMsg.experimental_attachments ?? [],
+        },
+        selectedChatModel: modelId,
         selectedVisibilityType: visibilityType,
-      };
+      } as any;
     },
     onFinish: () => {
       mutate(unstable_serialize(getChatHistoryPaginationKey));

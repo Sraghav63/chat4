@@ -22,6 +22,7 @@ import {
   MoreHorizontalIcon,
   ShareIcon,
   TrashIcon,
+  BranchIcon,
 } from './icons';
 import { memo } from 'react';
 import { useChatVisibility } from '@/hooks/use-chat-visibility';
@@ -45,8 +46,9 @@ const PureChatItem = ({
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild isActive={isActive}>
-        <Link href={`/chat/${chat.id}`} onClick={() => setOpenMobile(false)}>
-          <span>{chat.title}</span>
+        <Link href={`/chat/${chat.id}`} onClick={() => setOpenMobile(false)} className="flex items-center gap-2">
+          {chat.title.startsWith('↳') ? <BranchIcon size={12} /> : null}
+          <span>{chat.title.replace(/^↳\s*/, '')}</span>
         </Link>
       </SidebarMenuButton>
 
