@@ -25,6 +25,7 @@ import { memo, useState, startTransition } from 'react';
 import { toast } from 'sonner';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { getModelIcon, prettyName } from './model-selector';
+import { deleteTrailingMessages } from '@/app/(chat)/actions';
 
 export function PureMessageActions({
   chatId,
@@ -48,8 +49,19 @@ export function PureMessageActions({
   if (isLoading) return null;
   if (message.role === 'user') return null;
 
-  const retry = () => {
+  const retry = async () => {
+    // Optimistically remove the old assistant message from UI
     setMessages((msgs) => msgs.filter((m) => m.id !== message.id));
+
+    // Remove the assistant message (and any subsequent messages) from DB
+    try {
+      await deleteTrailingMessages({ id: message.id });
+    } catch (err) {
+      // Non-blocking – we still want to proceed with regenerate
+      console.error('Failed to delete trailing messages', err);
+    }
+
+    // Give React one tick to flush state before regenerating
     setTimeout(() => reload(), 0);
   };
 
