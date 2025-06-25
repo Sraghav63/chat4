@@ -123,6 +123,48 @@ export async function POST(request: Request) {
       message,
     });
 
+    // Convert any remote image attachments on the latest user message to base64 Data URLs – this improves
+    // compatibility with providers like OpenRouter that currently expect inline data for vision inputs.
+    async function inlineImageAttachments(msgs: typeof messages) {
+      return Promise.all(
+        msgs.map(async (m) => {
+          if (!('experimental_attachments' in m) || !m.experimental_attachments?.length) {
+            return m;
+          }
+
+          const processed = await Promise.all(
+            m.experimental_attachments.map(async (att) => {
+              if (
+                att.contentType?.startsWith('image/') &&
+                att.url &&
+                !att.url.startsWith('data:')
+              ) {
+                try {
+                  const res = await fetch(att.url);
+                  const blob = await res.arrayBuffer();
+                  const base64 = Buffer.from(blob).toString('base64');
+                  return {
+                    ...att,
+                    url: `data:${att.contentType};base64,${base64}`,
+                  };
+                } catch (err) {
+                  console.error('Failed to inline attachment', err);
+                }
+              }
+              return att;
+            }),
+          );
+
+          return {
+            ...m,
+            experimental_attachments: processed,
+          } as typeof m;
+        }),
+      );
+    }
+
+    const processedMessages = await inlineImageAttachments(messages);
+
     const { longitude, latitude, city, country } = geolocation(request);
 
     const requestHints: RequestHints = {
@@ -156,7 +198,7 @@ export async function POST(request: Request) {
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
           system: systemPrompt({ selectedChatModel, requestHints }),
-          messages,
+          messages: processedMessages,
           maxSteps: 5,
           experimental_activeTools:
             selectedChatModel === 'chat-model-reasoning'

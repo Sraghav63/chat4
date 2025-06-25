@@ -122,8 +122,15 @@ function PureMultimodalInput({
     return match ? decodeURIComponent(match[2]) : '';
   };
 
-  // Fetch models to get pricing info (same endpoint as model selector)
-  const { data: allModels } = useSWR<OpenRouterModel[]>('/api/openrouter/models', fetcher);
+  // API returns shape { data: OpenRouterModel[] }. Normalise to an array so we can safely call array methods.
+  const { data: modelsResp } = useSWR<{ data: OpenRouterModel[] }>(
+    '/api/openrouter/models',
+    fetcher,
+  );
+
+  const allModels: OpenRouterModel[] = Array.isArray((modelsResp as any)?.data)
+    ? (modelsResp as any).data
+    : [];
 
   const submitForm = useCallback(() => {
     // Prevent guest users from sending messages
