@@ -85,7 +85,7 @@ const getModelIcon = (modelId: string, modelName: string) => {
     return (
       <div className={ICON_CONTAINER_CLASSES}>
         <img
-          src="https://cdn.brandfetch.io/idR3duQxYl/theme/light/symbol.svg?c=1dxbfHSJFAPEGdCLU4o5B"
+          src="https://0pvg75gf2p.ufs.sh/f/uIkPOAEEjnXH9zKa0B3skoMtQ5E1lyJgGPSwKB32iIb4FAuC"
           alt="OpenAI"
           {...commonImgProps}
         />
@@ -111,7 +111,7 @@ const getModelIcon = (modelId: string, modelName: string) => {
     return (
       <div className={ICON_CONTAINER_CLASSES}>
         <img
-          src="https://cdn.brandfetch.io/iddjpnb3_W/theme/light/logo.svg?c=1dxbfHSJFAPEGdCLU4o5B"
+          src="https://0pvg75gf2p.ufs.sh/f/uIkPOAEEjnXHbKBI8kTfp2I3rPXDuQczAnH1mdFTVyla6WRb"
           alt="XAI / Grok"
           {...commonImgProps}
         />

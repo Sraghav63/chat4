@@ -1215,3 +1215,20 @@ export const StarFillIcon = ({ size = 16 }: { size?: number }) => (
     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
   </svg>
 );
+
+export const BranchIcon = ({ size = 16 }: { size?: number }) => (
+  <svg
+    height={size}
+    strokeLinejoin="round"
+    viewBox="0 0 16 16"
+    width={size}
+    style={{ color: 'currentcolor' }}
+  >
+    <circle cx="4" cy="4" r="2" fill="currentColor" />
+    <circle cx="4" cy="12" r="2" fill="currentColor" />
+    <circle cx="12" cy="8" r="2" fill="currentColor" />
+    <path d="M4 6v4a4 4 0 0 0 4 4h0" stroke="currentColor" strokeWidth="1.5" fill="none" />
+    <path d="M4 6V4a4 4 0 0 1 4-4h0" stroke="currentColor" strokeWidth="1.5" fill="none" />
+    <path d="M8 8h2" stroke="currentColor" strokeWidth="1.5" fill="none" />
+  </svg>
+);

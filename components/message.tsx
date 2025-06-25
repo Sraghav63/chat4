@@ -19,6 +19,7 @@ import { MessageEditor } from './message-editor';
 import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
 import type { UseChatHelpers } from '@ai-sdk/react';
+import { useRouter } from 'next/navigation';
 
 const PurePreviewMessage = ({
   chatId,
@@ -40,6 +41,15 @@ const PurePreviewMessage = ({
   requiresScrollPadding: boolean;
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
+  const router = useRouter();
+
+  const handleBranch = async (messageId: string) => {
+    // TODO: Implement API call to create a new chat branch
+    // For now, just log and show a toast
+    console.log('Branching at message:', messageId);
+    // toast.success('Branched chat! (stub)');
+    // router.push(`/chat/new-chat-id`);
+  };
 
   return (
     <AnimatePresence>
@@ -230,6 +240,7 @@ const PurePreviewMessage = ({
                 isLoading={isLoading}
                 reload={reload}
                 setMessages={setMessages}
+                onBranch={handleBranch}
               />
             )}
           </div>

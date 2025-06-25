@@ -3,6 +3,7 @@
 import cx from 'classnames';
 import { format, isWithinInterval } from 'date-fns';
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 
 interface WeatherAtLocation {
   latitude: number;
@@ -218,20 +219,75 @@ export function Weather({
 }: {
   weatherAtLocation?: WeatherAtLocation;
 }) {
+  const { data: session } = useSession();
   const [unit, setUnit] = useState<TempUnit>('C');
 
+  // Load temperature unit preference from database for authenticated users, localStorage for guests
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const stored = window.localStorage.getItem(PREFERRED_UNIT_KEY);
-    if (stored === 'F' || stored === 'C') {
-      setUnit(stored);
-    }
-  }, []);
+    const loadTemperatureUnit = async () => {
+      if (session?.user && session.user.type === 'regular') {
+        try {
+          const response = await fetch('/api/user/temperature-unit');
+          if (response.ok) {
+            const data = await response.json();
+            setUnit(data.temperatureUnit || 'C');
+          }
+        } catch (error) {
+          console.error('Failed to load temperature unit:', error);
+          // Fallback to localStorage for errors
+          if (typeof window !== 'undefined') {
+            const stored = window.localStorage.getItem(PREFERRED_UNIT_KEY);
+            if (stored === 'F' || stored === 'C') {
+              setUnit(stored);
+            }
+          }
+        }
+      } else {
+        // Guest users or unauthenticated - use localStorage
+        if (typeof window !== 'undefined') {
+          const stored = window.localStorage.getItem(PREFERRED_UNIT_KEY);
+          if (stored === 'F' || stored === 'C') {
+            setUnit(stored);
+          }
+        }
+      }
+    };
 
+    loadTemperatureUnit();
+  }, [session]);
+
+  // Save temperature unit preference
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(PREFERRED_UNIT_KEY, unit);
-  }, [unit]);
+    const saveTemperatureUnit = async () => {
+      if (session?.user && session.user.type === 'regular') {
+        try {
+          await fetch('/api/user/temperature-unit', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ temperatureUnit: unit }),
+          });
+        } catch (error) {
+          console.error('Failed to save temperature unit:', error);
+          // Fallback to localStorage for errors
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem(PREFERRED_UNIT_KEY, unit);
+          }
+        }
+      } else {
+        // Guest users or unauthenticated - use localStorage
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(PREFERRED_UNIT_KEY, unit);
+        }
+      }
+    };
+
+    // Don't save on initial load, only when unit changes
+    if (unit) {
+      saveTemperatureUnit();
+    }
+  }, [unit, session]);
 
   const currentTemp = maybeConvert(weatherAtLocation.current.temperature_2m, unit);
 

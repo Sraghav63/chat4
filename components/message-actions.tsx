@@ -3,7 +3,7 @@ import { useCopyToClipboard } from 'usehooks-ts';
 
 import type { Vote } from '@/lib/db/schema';
 
-import { CopyIcon, RedoIcon } from './icons';
+import { CopyIcon, RedoIcon, BranchIcon } from './icons';
 import { Button } from './ui/button';
 import {
   Tooltip,
@@ -24,7 +24,7 @@ import {
 import { memo, useState, startTransition, useMemo } from 'react';
 import { toast } from 'sonner';
 import { getModelIcon, prettyName } from './model-selector';
-import { saveChatModelAsCookie, deleteTrailingMessages } from '@/app/(chat)/actions';
+import { saveChatModelAsCookie } from '@/app/(chat)/actions';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import useSWR from 'swr';
 import { fetcher } from '@/lib/utils';
@@ -38,6 +38,7 @@ export function PureMessageActions({
   isLoading,
   reload,
   setMessages,
+  onBranch,
 }: {
   chatId: string;
   message: Message;
@@ -45,6 +46,7 @@ export function PureMessageActions({
   isLoading: boolean;
   reload: UseChatHelpers['reload'];
   setMessages: UseChatHelpers['setMessages'];
+  onBranch: (messageId: string) => void;
 }) {
   const [_, copyToClipboard] = useCopyToClipboard();
 
@@ -132,6 +134,20 @@ export function PureMessageActions({
           <TooltipContent>Copy</TooltipContent>
         </Tooltip>
 
+        {/* Branch Button */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              className="py-1 px-2 h-fit text-muted-foreground"
+              variant="outline"
+              onClick={() => onBranch(message.id)}
+            >
+              <BranchIcon />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Branch</TooltipContent>
+        </Tooltip>
+
         {/* Retry Button with dropdown */}
         <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger asChild>
@@ -142,7 +158,6 @@ export function PureMessageActions({
                 if (e.detail === 2) {
                   // double click -> quick retry same model
                   (async () => {
-                    await deleteTrailingMessages({ id: message.id });
                     setMessages((msgs) => msgs.filter((m) => m.id !== message.id));
                     reload();
                   })();
@@ -160,7 +175,6 @@ export function PureMessageActions({
               onClick={() => {
                 setMenuOpen(false);
                 (async () => {
-                  await deleteTrailingMessages({ id: message.id });
                   setMessages((msgs) => msgs.filter((m) => m.id !== message.id));
                   reload();
                 })();
@@ -184,15 +198,12 @@ export function PureMessageActions({
                       key={model.id}
                       onClick={async () => {
                         setMenuOpen(false);
-                        startTransition(async () => {
-                          await saveChatModelAsCookie(model.id);
-                          await deleteTrailingMessages({ id: message.id });
-                          setMessages((msgs) => msgs.filter((m) => m.id !== message.id));
-                          window.dispatchEvent(
-                            new CustomEvent('chat-model-changed', { detail: model.id }),
-                          );
-                          reload();
-                        });
+                        await saveChatModelAsCookie(model.id);
+                        window.dispatchEvent(
+                          new CustomEvent('chat-model-changed', { detail: model.id }),
+                        );
+                        setMessages((msgs) => msgs.filter((m) => m.id !== message.id));
+                        reload();
                       }}
                       className="flex items-center gap-2"
                     >

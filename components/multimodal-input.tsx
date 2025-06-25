@@ -27,6 +27,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowDown } from 'lucide-react';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 import type { VisibilityType } from './visibility-selector';
+import type { Session } from 'next-auth';
 
 function PureMultimodalInput({
   chatId,
@@ -42,6 +43,7 @@ function PureMultimodalInput({
   handleSubmit,
   className,
   selectedVisibilityType,
+  session,
 }: {
   chatId: string;
   input: UseChatHelpers['input'];
@@ -56,6 +58,7 @@ function PureMultimodalInput({
   handleSubmit: UseChatHelpers['handleSubmit'];
   className?: string;
   selectedVisibilityType: VisibilityType;
+  session: Session;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
@@ -110,6 +113,12 @@ function PureMultimodalInput({
   const [uploadQueue, setUploadQueue] = useState<Array<string>>([]);
 
   const submitForm = useCallback(() => {
+    // Prevent guest users from sending messages
+    if (session?.user?.type === 'guest') {
+      toast.error('Please log in to send messages');
+      return;
+    }
+
     window.history.replaceState({}, '', `/chat/${chatId}`);
 
     handleSubmit(undefined, {
@@ -130,6 +139,7 @@ function PureMultimodalInput({
     setLocalStorageInput,
     width,
     chatId,
+    session,
   ]);
 
   const uploadFile = async (file: File) => {
@@ -265,15 +275,19 @@ function PureMultimodalInput({
       <Textarea
         data-testid="multimodal-input"
         ref={textareaRef}
-        placeholder="Send a message..."
+        placeholder={session?.user?.type === 'guest' ? 'Please log in to send messages...' : 'Send a message...'}
         value={input}
         onChange={handleInput}
         className={cx(
           'min-h-[24px] max-h-[calc(75dvh)] overflow-hidden resize-none rounded-2xl !text-base bg-muted pb-10 dark:border-zinc-700',
           className,
+          {
+            'opacity-60': session?.user?.type === 'guest',
+          }
         )}
         rows={2}
         autoFocus
+        disabled={session?.user?.type === 'guest'}
         onKeyDown={(event) => {
           if (
             event.key === 'Enter' &&
@@ -284,6 +298,8 @@ function PureMultimodalInput({
 
             if (status !== 'ready') {
               toast.error('Please wait for the model to finish its response!');
+            } else if (session?.user?.type === 'guest') {
+              toast.error('Please log in to send messages');
             } else {
               submitForm();
             }
@@ -292,7 +308,11 @@ function PureMultimodalInput({
       />
 
       <div className="absolute bottom-0 p-2 w-fit flex flex-row justify-start">
-        <AttachmentsButton fileInputRef={fileInputRef} status={status} />
+        <AttachmentsButton 
+          fileInputRef={fileInputRef} 
+          status={status}
+          disabled={session?.user?.type === 'guest'}
+        />
       </div>
 
       <div className="absolute bottom-0 right-0 p-2 w-fit flex flex-row justify-end">
@@ -303,6 +323,7 @@ function PureMultimodalInput({
             input={input}
             submitForm={submitForm}
             uploadQueue={uploadQueue}
+            session={session}
           />
         )}
       </div>
@@ -326,9 +347,11 @@ export const MultimodalInput = memo(
 function PureAttachmentsButton({
   fileInputRef,
   status,
+  disabled = false,
 }: {
   fileInputRef: React.MutableRefObject<HTMLInputElement | null>;
   status: UseChatHelpers['status'];
+  disabled?: boolean;
 }) {
   return (
     <Button
@@ -336,10 +359,13 @@ function PureAttachmentsButton({
       className="rounded-md rounded-bl-lg p-[7px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200"
       onClick={(event) => {
         event.preventDefault();
-        fileInputRef.current?.click();
+        if (!disabled) {
+          fileInputRef.current?.click();
+        }
       }}
-      disabled={status !== 'ready'}
+      disabled={status !== 'ready' || disabled}
       variant="ghost"
+      title={disabled ? 'Please log in to attach files' : undefined}
     >
       <PaperclipIcon size={14} />
     </Button>
@@ -376,20 +402,29 @@ function PureSendButton({
   submitForm,
   input,
   uploadQueue,
+  session,
 }: {
   submitForm: () => void;
   input: string;
   uploadQueue: Array<string>;
+  session: Session;
 }) {
+  const isGuestUser = session?.user?.type === 'guest';
+  
   return (
     <Button
       data-testid="send-button"
       className="rounded-full p-1.5 h-fit border dark:border-zinc-600"
       onClick={(event) => {
         event.preventDefault();
-        submitForm();
+        if (isGuestUser) {
+          toast.error('Please log in to send messages');
+        } else {
+          submitForm();
+        }
       }}
-      disabled={input.length === 0 || uploadQueue.length > 0}
+      disabled={input.length === 0 || uploadQueue.length > 0 || isGuestUser}
+      title={isGuestUser ? 'Please log in to send messages' : undefined}
     >
       <ArrowUpIcon size={14} />
     </Button>
@@ -400,5 +435,6 @@ const SendButton = memo(PureSendButton, (prevProps, nextProps) => {
   if (prevProps.uploadQueue.length !== nextProps.uploadQueue.length)
     return false;
   if (prevProps.input !== nextProps.input) return false;
+  if (prevProps.session?.user?.type !== nextProps.session?.user?.type) return false;
   return true;
 });

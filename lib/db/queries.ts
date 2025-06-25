@@ -600,3 +600,32 @@ export async function toggleFavouriteModel({
     throw new ChatSDKError('bad_request:database', 'Failed to toggle favourite model');
   }
 }
+
+export async function getUserTemperatureUnit({ id }: { id: string }) {
+  try {
+    const [result] = await db
+      .select({ temperatureUnit: user.temperatureUnit })
+      .from(user)
+      .where(eq(user.id, id));
+    return result?.temperatureUnit || 'C';
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to get user temperature unit');
+  }
+}
+
+export async function updateUserTemperatureUnit({ 
+  id, 
+  temperatureUnit 
+}: { 
+  id: string; 
+  temperatureUnit: 'C' | 'F';
+}) {
+  try {
+    return await db
+      .update(user)
+      .set({ temperatureUnit })
+      .where(eq(user.id, id));
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to update user temperature unit');
+  }
+}

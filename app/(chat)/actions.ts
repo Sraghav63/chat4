@@ -3,8 +3,6 @@
 import { generateText, type UIMessage } from 'ai';
 import { cookies } from 'next/headers';
 import {
-  deleteMessagesByChatIdAfterTimestamp,
-  getMessageById,
   updateChatVisiblityById,
 } from '@/lib/db/queries';
 import type { VisibilityType } from '@/components/visibility-selector';
@@ -31,15 +29,6 @@ export async function generateTitleFromUserMessage({
   });
 
   return title;
-}
-
-export async function deleteTrailingMessages({ id }: { id: string }) {
-  const [message] = await getMessageById({ id });
-
-  await deleteMessagesByChatIdAfterTimestamp({
-    chatId: message.chatId,
-    timestamp: message.createdAt,
-  });
 }
 
 export async function updateChatVisibility({
