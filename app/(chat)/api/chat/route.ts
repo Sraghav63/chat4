@@ -200,26 +200,33 @@ export async function POST(request: Request) {
           system: systemPrompt({ selectedChatModel, requestHints }),
           messages: processedMessages,
           maxSteps: 5,
-          experimental_activeTools:
-            selectedChatModel === 'chat-model-reasoning'
-              ? []
-              : [
+          // Enable tool/function calling only for models that are known to
+          // support the OpenAI function-calling spec (essentially the OpenAI
+          // family). Other providers (Meta, Google, X-AI, etc.) will reject the
+          // request if we include the "tools" field, resulting in the generic
+          // "Oops, an error occurred" message seen in the UI.
+          ...(selectedChatModel.startsWith('openai/') ||
+          selectedChatModel.startsWith('openrouter/')
+            ? {
+                experimental_activeTools: [
                   'getWeather',
                   'createDocument',
                   'updateDocument',
                   'requestSuggestions',
                 ],
+                tools: {
+                  getWeather,
+                  createDocument: createDocument({ session, dataStream }),
+                  updateDocument: updateDocument({ session, dataStream }),
+                  requestSuggestions: requestSuggestions({
+                    session,
+                    dataStream,
+                  }),
+                },
+              }
+            : { experimental_activeTools: [] }),
           experimental_transform: smoothStream({ chunking: 'word' }),
           experimental_generateMessageId: generateUUID,
-          tools: {
-            getWeather,
-            createDocument: createDocument({ session, dataStream }),
-            updateDocument: updateDocument({ session, dataStream }),
-            requestSuggestions: requestSuggestions({
-              session,
-              dataStream,
-            }),
-          },
           onFinish: async ({ response }) => {
             if (session.user?.id) {
               try {

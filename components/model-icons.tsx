@@ -16,8 +16,7 @@ export const getModelIcon = (modelId: string, modelName: string) => {
   const commonImgProps = {
     width: 24,
     height: 24,
-    className: 'text-foreground',
-    style: { filter: 'brightness(0) invert(1)' } as React.CSSProperties,
+    className: 'invert dark:invert-0',
   } as const;
 
   // Google / Gemini

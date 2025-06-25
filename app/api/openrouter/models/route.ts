@@ -5,18 +5,20 @@ export const runtime = 'edge';
 export async function GET(_request: NextRequest) {
   const apiKey = process.env.OPENROUTER_API_KEY;
 
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: 'Missing OPENROUTER_API_KEY environment variable' },
-      { status: 500 },
-    );
+  // Build headers conditionally – OpenRouter allows unauthenticated requests for
+  // public (free) model metadata, so we only send the Authorization header when
+  // an API key is actually provided. This prevents a 500 response when the app
+  // is running without a key and ensures the model selector can still display
+  // free models.
+
+  const headers: Record<string, string> = {};
+  if (apiKey) {
+    headers['Authorization'] = `Bearer ${apiKey}`;
   }
 
   try {
     const res = await fetch('https://openrouter.ai/api/v1/models', {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
+      headers,
       // cache for 1 hour at the edge
       next: { revalidate: 3600 },
     });
