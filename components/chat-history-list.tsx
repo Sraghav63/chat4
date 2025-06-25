@@ -97,12 +97,12 @@ export function ChatHistoryList() {
 
   return (
     <div className="min-h-screen bg-muted/40">
-      <div className="max-w-5xl mx-auto px-6 py-16">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-16">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-12">
-          <div className="space-y-2">
-            <h1 className="text-4xl font-bold tracking-tight">Your chats</h1>
-            <p className="text-lg text-muted-foreground">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 mb-8 sm:mb-12">
+          <div className="space-y-1 sm:space-y-2">
+            <h1 className="text-2xl sm:text-4xl font-bold tracking-tight">Your chats</h1>
+            <p className="text-base sm:text-lg text-muted-foreground">
               Browse and search through your conversations
             </p>
           </div>
@@ -112,8 +112,8 @@ export function ChatHistoryList() {
               router.push('/');
               router.refresh();
             }}
-            size="lg"
-            className="gap-2 w-full sm:w-auto"
+            size="default"
+            className="gap-2 w-full sm:w-auto sm:size-lg"
           >
             <PlusIcon size={16} />
             New chat
@@ -121,9 +121,9 @@ export function ChatHistoryList() {
         </div>
 
         {/* Search and Stats */}
-        <div className="grid gap-6 md:grid-cols-[1fr,auto] items-start mb-8">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-[1fr,auto] items-start mb-6 sm:mb-8">
           <div className="space-y-4">
-            <div className="relative max-w-md">
+            <div className="relative w-full max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Search your chats..."
@@ -132,7 +132,7 @@ export function ChatHistoryList() {
                 className="pl-10"
               />
             </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
                 <MessageCircle className="h-4 w-4" />
                 <span>{chats.length} chats</span>
@@ -150,15 +150,15 @@ export function ChatHistoryList() {
         {/* Chat list */}
         {isSearching ? (
           // SEARCH MODE
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {isSearchLoading ? (
-              <div className="flex items-center justify-center py-8">
+              <div className="flex items-center justify-center py-6 sm:py-8">
                 <div className="animate-spin text-muted-foreground">
                   <LoaderIcon size={24} />
                 </div>
               </div>
             ) : searchResults.length === 0 ? (
-              <Card className="p-12 text-center">
+              <Card className="p-8 sm:p-12 text-center rounded-2xl sm:rounded-3xl">
                 <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-6 mx-auto">
                   <Search className="h-6 w-6 text-muted-foreground" />
                 </div>
@@ -168,35 +168,35 @@ export function ChatHistoryList() {
                 </p>
               </Card>
             ) : (
-              <div className="grid gap-4">
+              <div className="grid gap-3 sm:gap-4">
                 {searchResults.map((res) => {
                   const htmlSnippet = res.snippet
                     ? res.snippet.replace(new RegExp(`(${searchTerm})`, 'ig'), '<mark>$1</mark>')
                     : '';
                   return (
-                    <Card key={res.chatId} className="group hover:shadow-md transition-all duration-200">
+                    <Card key={res.chatId} className="group hover:shadow-md transition-all duration-200 rounded-2xl sm:rounded-3xl overflow-hidden">
                       <Link
                         href={`/chat/${res.chatId}`}
                         onClick={() => setOpenMobile(false)}
-                        className="block p-6"
+                        className="block p-4 sm:p-6"
                       >
-                        <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start justify-between gap-3 sm:gap-4">
                           <div className="min-w-0 flex-1">
-                            <h3 className="font-semibold truncate mb-2 flex items-center gap-2">
+                            <h3 className="font-semibold truncate mb-1 sm:mb-2 flex items-center gap-2 text-sm sm:text-base">
                               <div className="w-2 h-2 rounded-full bg-primary" />
                               {res.title}
                             </h3>
                             {htmlSnippet && (
                               <p
-                                className="text-sm text-muted-foreground line-clamp-2"
+                                className="text-xs sm:text-sm text-muted-foreground line-clamp-2"
                                 dangerouslySetInnerHTML={{ __html: htmlSnippet }}
                               />
                             )}
                           </div>
                           <Button
                             variant="ghost"
-                            size="sm"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            size="sm" 
+                            className="opacity-60 sm:opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
@@ -216,21 +216,21 @@ export function ChatHistoryList() {
           </div>
         ) : (
           // NORMAL MODE
-          <div className="grid gap-4">
+          <div className="grid gap-3 sm:gap-4">
             {chats.map((chat) => (
-              <Card key={chat.id} className="group hover:shadow-md transition-all duration-200">
+              <Card key={chat.id} className="group hover:shadow-md transition-all duration-200 rounded-2xl sm:rounded-3xl overflow-hidden">
                 <Link
                   href={`/chat/${chat.id}`}
                   onClick={() => setOpenMobile(false)}
-                  className="block p-6"
+                  className="block p-4 sm:p-6"
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start justify-between gap-3 sm:gap-4">
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold truncate mb-2 flex items-center gap-2">
+                      <h3 className="font-semibold truncate mb-1 sm:mb-2 flex items-center gap-2 text-sm sm:text-base">
                         <div className="w-2 h-2 rounded-full bg-primary" />
                         {chat.title}
                       </h3>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
                         <Clock className="h-4 w-4" />
                         <span>{formatDistanceToNow(new Date(chat.createdAt))} ago</span>
                       </div>
@@ -238,7 +238,7 @@ export function ChatHistoryList() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      className="opacity-60 sm:opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -256,7 +256,7 @@ export function ChatHistoryList() {
             {!hasReachedEnd && (
               <Button
                 variant="outline"
-                className="mt-4"
+                className="mt-3 sm:mt-4 w-full sm:w-auto mx-auto rounded-xl"
                 onClick={() => setSize((size) => size + 1)}
                 disabled={isValidating}
               >
@@ -270,12 +270,12 @@ export function ChatHistoryList() {
             )}
 
             {chats.length === 0 && (
-              <Card className="p-12 text-center">
+              <Card className="p-8 sm:p-12 text-center rounded-2xl sm:rounded-3xl">
                 <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-6 mx-auto">
                   <MessageCircle className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <h3 className="text-xl font-semibold mb-3">No chats yet</h3>
-                <p className="text-muted-foreground max-w-md mx-auto mb-6">
+                <p className="text-sm sm:text-base text-muted-foreground max-w-md mx-auto mb-6">
                   Start a new conversation to see your chat history here.
                 </p>
                 <Button
@@ -284,7 +284,7 @@ export function ChatHistoryList() {
                     router.push('/');
                     router.refresh();
                   }}
-                  className="gap-2"
+                  className="gap-2 w-full sm:w-auto"
                 >
                   <PlusIcon size={16} />
                   New chat
