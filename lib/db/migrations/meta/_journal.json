@@ -71,6 +71,20 @@
       "when": 1750817881776,
       "tag": "0009_lively_lizard",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1750895990780,
+      "tag": "0010_mighty_star_brand",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1750897310777,
+      "tag": "0011_adorable_human_fly",
+      "breakpoints": true
     }
   ]
 }

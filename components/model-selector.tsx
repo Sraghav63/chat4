@@ -18,7 +18,16 @@ import {
   StarFillIcon,
 } from './icons';
 import type { Session } from 'next-auth';
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 type OpenRouterModel = {
   id: string;
@@ -64,34 +73,42 @@ const PROVIDER_ORDER = ['google', 'anthropic', 'openai', 'x-ai', 'meta', 'mistra
 
 const ICON_CONTAINER_CLASSES = "w-6 h-6 rounded-lg flex items-center justify-center";
 
-const PRICE_THRESHOLDS = {
-  green: 0.5,
-  yellow: 2,
-  orange: 5,
-};
-
-type PriceLevel = 'green' | 'yellow' | 'orange' | 'red';
-
-const getPriceLevel = (model: OpenRouterModel): PriceLevel => {
-  const prompt = parseFloat(model.pricing?.prompt ?? '0');
-  const completion = parseFloat(model.pricing?.completion ?? '0');
-  const avg = (prompt + completion) / 2;
-
-  if (avg <= PRICE_THRESHOLDS.green) return 'green';
-  if (avg <= PRICE_THRESHOLDS.yellow) return 'yellow';
-  if (avg <= PRICE_THRESHOLDS.orange) return 'orange';
-  return 'red';
-};
-
-const getPriceIndicator = (level: PriceLevel) => {
-  const colorMap: Record<PriceLevel, string> = {
-    green: 'bg-green-500',
-    yellow: 'bg-yellow-400',
-    orange: 'bg-orange-500',
-    red: 'bg-red-600',
-  };
-  return <div className={`w-2 h-2 rounded-full ${colorMap[level]}`} />;
-};
+const EXPENSIVE_MODEL_IDS = new Set<string>([
+  'openai/o1-pro',
+  'openai/gpt-4.5-preview',
+  'openai/gpt-4o-search-preview',
+  'openai/gpt-4',
+  'openai/gpt-4-0314',
+  'openai/o3-pro',
+  'openai/gpt-4o-mini-search-preview',
+  'anthropic/claude-opus-4',
+  'anthropic/claude-3-opus:beta',
+  'anthropic/claude-3-opus',
+  'openai/o1',
+  'openai/o1-preview',
+  'openai/gpt-4-turbo',
+  'openai/gpt-4-turbo-preview',
+  'openai/gpt-4-1106-preview',
+  'anthropic/claude-2.1:beta',
+  'anthropic/claude-2.1',
+  'anthropic/claude-2:beta',
+  'anthropic/claude-2',
+  'anthropic/claude-2.0:beta',
+  'anthropic/claude-2.0',
+  'alpindale/goliath-120b',
+  'openai/gpt-4o:extended',
+  'perplexity/sonar-reasoning',
+  'x-ai/grok-vision-beta',
+  'x-ai/grok-beta',
+  'openai/chatgpt-4o-latest',
+  'openai/gpt-4o-2024-05-13',
+  'perplexity/sonar',
+  'perplexity/llama-3.1-sonar-large-128k-online',
+  'raifle/sorcererlm-8x22b',
+  'x-ai/grok-3',
+  'x-ai/grok-3-beta',
+  'perplexity/sonar-pro',
+]);
 
 const getModelIcon = (modelId: string, modelName: string) => {
   const provider = modelId.split('/')[0].toLowerCase();
@@ -170,7 +187,7 @@ const getModelIcon = (modelId: string, modelName: string) => {
   }
 
   // Meta/Llama models - infinity symbol
-  if (provider === 'meta' || name.includes('llama')) {
+  if (provider === 'meta' || provider.startsWith('meta') || provider.includes('llama') || name.includes('llama')) {
     return (
       <div className={ICON_CONTAINER_CLASSES}>
         <img
@@ -228,7 +245,7 @@ const getModelIcon = (modelId: string, modelName: string) => {
 };
 
 // Re-export helpers so other components can consume the same visual logic
-export { getModelIcon, prettyName, PRICE_THRESHOLDS, type OpenRouterModel };
+export { getModelIcon, prettyName, type OpenRouterModel };
 
 // Get capability badges for a model
 const getCapabilityBadges = (model: OpenRouterModel) => {
@@ -332,6 +349,8 @@ export function ModelSelector({
   const [open, setOpen] = useState(false);
   const [optimisticModelId, setOptimisticModelId] = useOptimistic(selectedModelId);
   const [search, setSearch] = useState('');
+  const [showExpensiveDialog, setShowExpensiveDialog] = useState(false);
+  const [pendingModelId, setPendingModelId] = useState<string | null>(null);
 
   const { data } = useSWR<{ data: OpenRouterModel[] }>('/api/openrouter/models', fetcher);
   // Use models returned from API if available, otherwise fall back to a minimal
@@ -382,6 +401,15 @@ export function ModelSelector({
     if (!open) setSearch('');
   }, [open]);
 
+  const handleConfirmExpensive = () => {
+    if (!pendingModelId) return;
+    startTransition(() => {
+      setOptimisticModelId(pendingModelId);
+      saveChatModelAsCookie(pendingModelId);
+      onSelect?.(pendingModelId);
+    });
+  };
+
   const toggleFav = async (id: string) => {
     // Optimistic update using SWR mutate
     mutateFav(
@@ -416,8 +444,21 @@ export function ModelSelector({
     const isFavorite = allFavIds.has(id);
     const capabilities = getCapabilityBadges(model);
     const subtitle = getModelSubtitle(model);
-    const priceLevel = getPriceLevel(model);
-    const priceIndicator = getPriceIndicator(priceLevel);
+
+    const handleModelSelect = () => {
+      if (EXPENSIVE_MODEL_IDS.has(id)) {
+        setPendingModelId(id);
+        setShowExpensiveDialog(true);
+        setOpen(false);
+      } else {
+        setOpen(false);
+        startTransition(() => {
+          setOptimisticModelId(id);
+          saveChatModelAsCookie(id);
+          onSelect?.(id);
+        });
+      }
+    };
 
     return (
       <div
@@ -429,14 +470,7 @@ export function ModelSelector({
             ? 'border-primary bg-primary/5' 
             : 'border-border hover:border-primary/50'
         )}
-        onClick={() => {
-          setOpen(false);
-          startTransition(() => {
-            setOptimisticModelId(id);
-            saveChatModelAsCookie(id);
-            onSelect?.(id);
-          });
-        }}
+        onClick={handleModelSelect}
         onContextMenu={(e) => {
           e.preventDefault();
           toggleFav(id);
@@ -476,22 +510,6 @@ export function ModelSelector({
         <div className="flex items-center justify-between mt-auto">
           <div className="flex gap-1 items-center">
             {capabilities}
-            <TooltipProvider delayDuration={200}>
-              <Tooltip>
-                <TooltipTrigger asChild>{priceIndicator}</TooltipTrigger>
-                <TooltipContent side="top">
-                  <div className="flex flex-col text-xs">
-                    <span className="font-medium capitalize">{priceLevel === 'green' ? 'Cheap' : priceLevel === 'yellow' ? 'Moderate' : priceLevel === 'orange' ? 'Expensive' : 'Premium'}</span>
-                    {model.pricing && (
-                      <>
-                        <span>Prompt: ${model.pricing.prompt}/1M</span>
-                        <span>Completion: ${model.pricing.completion}/1M</span>
-                      </>
-                    )}
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
           </div>
           {isSelected && (
             <CheckCircleFillIcon size={16} />
@@ -502,84 +520,111 @@ export function ModelSelector({
   };
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button 
-          variant="outline" 
-          className={cn('md:px-2 md:h-[34px] gap-2 flex items-center max-w-[180px]',
-            className,
-          )}
-        >
-          {getModelIcon(optimisticModelId, '')}
-          <span className="truncate text-sm font-medium">
-            {prettyName(optimisticModelId)}
-          </span>
-          <ChevronDownIcon />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="start"
-        className="w-[95vw] md:w-[800px] max-h-[600px] overflow-y-auto p-0 bg-popover"
+    <>
+      <AlertDialog
+        open={showExpensiveDialog}
+        onOpenChange={(isOpen) => {
+          setShowExpensiveDialog(isOpen);
+          if (!isOpen) {
+            setPendingModelId(null);
+          }
+        }}
       >
-        {/* Search header */}
-        <div className="sticky top-0 bg-popover border-b p-4 z-10">
-          <div className="relative">
-            <svg
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.35-4.35" />
-            </svg>
-            <Input
-              placeholder="Search models..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 h-10"
-            />
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Expensive Model Selected</AlertDialogTitle>
+            <AlertDialogDescription>
+              This model is considered expensive and may incur higher costs. Would you like to proceed?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmExpensive}>
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button 
+            variant="outline" 
+            className={cn('md:px-2 md:h-[34px] gap-2 flex items-center max-w-[180px]',
+              className,
+            )}
+          >
+            {getModelIcon(optimisticModelId, '')}
+            <span className="truncate text-sm font-medium">
+              {prettyName(optimisticModelId)}
+            </span>
+            <ChevronDownIcon />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="start"
+          className="w-[95vw] md:w-[800px] max-h-[600px] overflow-y-auto p-0 bg-popover"
+        >
+          {/* Search header */}
+          <div className="sticky top-0 bg-popover border-b p-4 z-10">
+            <div className="relative">
+              <svg
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
+              </svg>
+              <Input
+                placeholder="Search models..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10 h-10"
+              />
+            </div>
           </div>
-        </div>
 
-        <div className="p-4">
-          {/* Favourites section */}
-          {favouriteModels.length > 0 && (
-            <div className="mb-6">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="text-yellow-500">
-                  <StarFillIcon size={16} />
+          <div className="p-4">
+            {/* Favourites section */}
+            {favouriteModels.length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="text-yellow-500">
+                    <StarFillIcon size={16} />
+                  </div>
+                  <h2 className="text-sm font-medium">Favorites</h2>
                 </div>
-                <h2 className="text-sm font-medium">Favorites</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {favouriteModels.map(renderCard)}
+                </div>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {favouriteModels.map(renderCard)}
-              </div>
-            </div>
-          )}
+            )}
 
-          {/* Provider sections */}
-          {providerGroups.map(([provider, models]) => (
-            <div key={provider} className="mb-6">
-              <h2 className="text-sm font-medium mb-3 capitalize text-muted-foreground">
-                {provider}
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {models.map(renderCard)}
+            {/* Provider sections */}
+            {providerGroups.map(([provider, models]) => (
+              <div key={provider} className="mb-6">
+                <h2 className="text-sm font-medium mb-3 capitalize text-muted-foreground">
+                  {provider}
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {models.map(renderCard)}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
 
-          {filteredModels.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              No models found
-            </div>
-          )}
-        </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
+            {filteredModels.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                No models found
+              </div>
+            )}
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   );
 }
