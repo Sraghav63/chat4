@@ -1,4 +1,4 @@
-export const DEFAULT_CHAT_MODEL: string = 'openai/gpt-4o';
+export const DEFAULT_CHAT_MODEL: string = 'meta-llama/llama-4-maverick:free';
 
 // Legacy interface kept for compatibility in parts of the codebase that may still
 // import it. The new model selector fetches models dynamically, so this list is
