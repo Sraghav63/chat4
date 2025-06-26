@@ -16,7 +16,7 @@ import {
 import { toast } from 'sonner';
 import { useLocalStorage, useWindowSize } from 'usehooks-ts';
 import useSWR from 'swr';
-import { PRICE_THRESHOLDS, type OpenRouterModel } from './model-selector';
+import type { OpenRouterModel } from './model-selector';
 import { fetcher } from '@/lib/utils';
 
 import { ArrowUpIcon, PaperclipIcon, StopIcon } from './icons';
@@ -150,19 +150,6 @@ function PureMultimodalInput({
     if (hasImages && !supportsImages) {
       toast.error('The chosen model does not indicate image-input support. Pick a vision-capable model (see model selector) or remove images.');
       return;
-    }
-
-    if (selectedModel) {
-      const prompt = parseFloat(selectedModel.pricing?.prompt ?? '0');
-      const completion = parseFloat(selectedModel.pricing?.completion ?? '0');
-      const avg = (prompt + completion) / 2;
-      const isExpensive = avg > PRICE_THRESHOLDS.orange; // orange/red levels
-      if (isExpensive) {
-        const confirmSend = window.confirm(
-          `Model ${modelId} is expensive ($${prompt}/1M prompt, $${completion}/1M completion). Are you sure you want to send this message?`,
-        );
-        if (!confirmSend) return;
-      }
     }
 
     window.history.replaceState({}, '', `/chat/${chatId}`);
