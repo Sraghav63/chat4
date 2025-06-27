@@ -228,7 +228,7 @@ As we move forward, Silicon Valley continues to reinvent itself. While some pred
     ];
   } else if (compareMessages(recentMessage, TEST_PROMPTS.GET_WEATHER_RESULT)) {
     return [
-      ...textToDeltas('The current temperature in San Francisco is 17°C.'),
+      ...textToDeltas('The current weather in San Francisco is 63°F with mainly clear skies. It feels like 65°F with 68% humidity and light winds at 12 mph from the southwest. Great conditions overall!'),
       {
         type: 'finish',
         finishReason: 'stop',

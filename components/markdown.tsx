@@ -3,6 +3,8 @@ import React, { memo } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { CodeBlock } from './code-block';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 
 const components: Partial<Components> = {
   // @ts-expect-error
@@ -91,13 +93,32 @@ const components: Partial<Components> = {
       </h6>
     );
   },
+  table: ({ node, children, ...props }) => {
+    return (
+      <div className="overflow-auto my-4">
+        <table
+          className="w-full text-left border-collapse [&_thead_th]:border-b [&_td]:border-b [&_th]:px-3 [&_td]:px-3 [&_th]:py-2 [&_td]:py-2 [&_tr:nth-child(even)]:bg-muted"
+          {...props}
+        >
+          {children}
+        </table>
+      </div>
+    );
+  },
+  hr: (props) => <hr className="my-4 border-muted" {...props} />,
 };
 
-const remarkPlugins = [remarkGfm];
+const remarkPlugins = [remarkGfm, remarkMath];
+
+const rehypePlugins = [rehypeKatex];
 
 const NonMemoizedMarkdown = ({ children }: { children: string }) => {
   return (
-    <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
+    <ReactMarkdown
+      remarkPlugins={remarkPlugins}
+      rehypePlugins={rehypePlugins}
+      components={components}
+    >
       {children}
     </ReactMarkdown>
   );

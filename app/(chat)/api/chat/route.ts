@@ -200,31 +200,24 @@ export async function POST(request: Request) {
           system: systemPrompt({ selectedChatModel, requestHints }),
           messages: processedMessages,
           maxSteps: 5,
-          // Enable tool/function calling only for models that are known to
-          // support the OpenAI function-calling spec (essentially the OpenAI
-          // family). Other providers (Meta, Google, X-AI, etc.) will reject the
-          // request if we include the "tools" field, resulting in the generic
-          // "Oops, an error occurred" message seen in the UI.
-          ...(selectedChatModel.startsWith('openai/') ||
-          selectedChatModel.startsWith('openrouter/')
-            ? {
-                experimental_activeTools: [
-                  'getWeather',
-                  'createDocument',
-                  'updateDocument',
-                  'requestSuggestions',
-                ],
-                tools: {
-                  getWeather,
-                  createDocument: createDocument({ session, dataStream }),
-                  updateDocument: updateDocument({ session, dataStream }),
-                  requestSuggestions: requestSuggestions({
-                    session,
-                    dataStream,
-                  }),
-                },
-              }
-            : { experimental_activeTools: [] }),
+          // Enable tool/function calling for different model capabilities
+          // Weather tool works with all models since it's a simple API call
+          // Document tools require OpenAI-compatible function calling
+          // Provide full tool suite universally to prevent unsupported-tool errors.
+          ...{
+            experimental_activeTools: [
+              'getWeather',
+              'createDocument',
+              'updateDocument',
+              'requestSuggestions',
+            ],
+            tools: {
+              getWeather,
+              createDocument: createDocument({ session, dataStream }),
+              updateDocument: updateDocument({ session, dataStream }),
+              requestSuggestions: requestSuggestions({ session, dataStream }),
+            },
+          },
           experimental_transform: smoothStream({ chunking: 'word' }),
           experimental_generateMessageId: generateUUID,
           onFinish: async ({ response }) => {

@@ -83,57 +83,94 @@ export const TEST_PROMPTS: Record<string, CoreMessage> = {
         toolCallId: 'call_456',
         toolName: 'getWeather',
         result: {
-          latitude: 37.763283,
-          longitude: -122.41286,
-          generationtime_ms: 0.06449222564697266,
-          utc_offset_seconds: -25200,
-          timezone: 'America/Los_Angeles',
-          timezone_abbreviation: 'GMT-7',
-          elevation: 18,
-          current_units: {
-            time: 'iso8601',
-            interval: 'seconds',
-            temperature_2m: '°C',
+          location: {
+            name: 'San Francisco, CA',
+            latitude: 37.763283,
+            longitude: -122.41286,
+            timezone: 'America/Los_Angeles',
+            elevation: 18
           },
           current: {
             time: '2025-03-10T14:00',
-            interval: 900,
-            temperature_2m: 17,
+            temperature: 63,
+            feels_like: 65,
+            humidity: 68,
+            pressure: 1013.2,
+            wind: {
+              speed: 12,
+              direction: 225,
+              gusts: 18
+            },
+            precipitation: {
+              current: 0,
+              rain: 0,
+              showers: 0,
+              snow: 0
+            },
+            conditions: {
+              weather_code: 1,
+              cloud_cover: 25,
+              visibility: 10000,
+              is_day: true
+            },
+            weather_description: 'Mainly clear',
+            temperature_unit: '°F',
+            location_country: 'United States'
           },
-          daily_units: {
-            time: 'iso8601',
-            sunrise: 'iso8601',
-            sunset: 'iso8601',
-          },
-          daily: {
-            time: [
-              '2025-03-10',
-              '2025-03-11',
-              '2025-03-12',
-              '2025-03-13',
-              '2025-03-14',
-              '2025-03-15',
-              '2025-03-16',
-            ],
-            sunrise: [
-              '2025-03-10T07:27',
-              '2025-03-11T07:25',
-              '2025-03-12T07:24',
-              '2025-03-13T07:22',
-              '2025-03-14T07:21',
-              '2025-03-15T07:19',
-              '2025-03-16T07:18',
-            ],
-            sunset: [
-              '2025-03-10T19:12',
-              '2025-03-11T19:13',
-              '2025-03-12T19:14',
-              '2025-03-13T19:15',
-              '2025-03-14T19:16',
-              '2025-03-15T19:17',
-              '2025-03-16T19:17',
-            ],
-          },
+          hourly_forecast: [
+            {
+              time: '2025-03-10T14:00',
+              temperature: 63,
+              feels_like: 65,
+              humidity: 68,
+              precipitation_probability: 5,
+              precipitation: 0,
+              weather_code: 1,
+              weather_description: 'Mainly clear',
+              cloud_cover: 25,
+              wind_speed: 12,
+              wind_direction: 225,
+              is_day: true
+            }
+          ],
+          daily_forecast: [
+            {
+              date: '2025-03-10',
+              temperature: {
+                max: 68,
+                min: 52
+              },
+              feels_like: {
+                max: 70,
+                min: 54
+              },
+              precipitation: {
+                sum: 0,
+                rain_sum: 0,
+                hours: 0,
+                probability_max: 10
+              },
+              wind: {
+                max_speed: 15,
+                max_gusts: 22,
+                dominant_direction: 225
+              },
+              sun: {
+                sunrise: '2025-03-10T07:27',
+                sunset: '2025-03-10T19:12'
+              },
+              weather_code: 1,
+              weather_description: 'Mainly clear',
+              uv_index: 6
+            }
+          ],
+          units: {
+            temperature: '°F',
+            wind_speed: 'mph',
+            precipitation: 'inch',
+            pressure: 'hPa',
+            visibility: 'meters'
+          }
         },
       },
     ],

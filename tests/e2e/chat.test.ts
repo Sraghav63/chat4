@@ -105,7 +105,7 @@ test.describe('Chat activity', () => {
     const assistantMessage = await chatPage.getRecentAssistantMessage();
 
     expect(assistantMessage.content).toBe(
-      'The current temperature in San Francisco is 17°C.',
+      'The current weather in San Francisco is 63°F with mainly clear skies. It feels like 65°F with 68% humidity and light winds at 12 mph from the southwest. Great conditions overall!',
     );
   });
 

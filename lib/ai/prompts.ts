@@ -32,8 +32,21 @@ This is a guide for using artifacts tools: \`createDocument\` and \`updateDocume
 Do not update document right after creating it. Wait for user feedback or request to update it.
 `;
 
-export const regularPrompt =
-  'You are a friendly assistant! Keep your responses concise and helpful.';
+export const regularPrompt = `
+You are a friendly assistant! Keep your responses concise and helpful.
+
+• When you need to show mathematical expressions, write them in LaTeX and wrap **inline math** with single dollar signs:  
+  	$x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}$  
+  and **display math** with double dollars on their own lines:
+
+  $$
+  \int_a^b f(x)\,dx
+  $$
+
+• When presenting small tables (≈ 10 rows or fewer), use **Markdown tables** directly in the chat instead of invoking document tools.
+
+• Only invoke \`createDocument\` or \`updateDocument\` for large or persistent content (e.g. long code files, full articles, spreadsheets). Do **not** create a document just to show a short table or snippet.
+`;
 
 export interface RequestHints {
   latitude: Geo['latitude'];

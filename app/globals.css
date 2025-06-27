@@ -1,4 +1,5 @@
 @tailwind base;
+@import 'katex/dist/katex.min.css';
 @tailwind components;
 @tailwind utilities;
 
@@ -58,6 +59,7 @@
         --sidebar-border: 220 13% 91%;
         --sidebar-ring: 217.2 91.2% 59.8%;
     }
+
     .dark {
         --background: 240 10% 3.9%;
         --foreground: 0 0% 98%;
@@ -132,7 +134,7 @@
     @apply bg-background dark:bg-zinc-800 outline-none selection:bg-zinc-900 !important;
 }
 
-.ͼo.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground,
+.ͼo.cm-focused>.cm-scroller>.cm-selectionLayer .cm-selectionBackground,
 .ͼo.cm-selectionBackground,
 .ͼo.cm-content::selection {
     @apply bg-zinc-200 dark:bg-zinc-900 !important;
@@ -161,4 +163,72 @@
 
 .suggestion-highlight {
     @apply bg-blue-200 hover:bg-blue-300 dark:hover:bg-blue-400/50 dark:text-blue-50 dark:bg-blue-500/40;
+}
+
+/* Weather component styles */
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+
+/* Weather animation effects */
+.rain-overlay {
+    background-image:
+        linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.05) 30%, rgba(255, 255, 255, 0.05) 60%, transparent 60%),
+        linear-gradient(-45deg, transparent 30%, rgba(255, 255, 255, 0.03) 30%, rgba(255, 255, 255, 0.03) 60%, transparent 60%);
+    background-size: 20px 20px;
+    animation: rain-fall 2s linear infinite;
+}
+
+.snow-overlay {
+    background-image:
+        radial-gradient(2px 2px at 20px 30px, white, transparent),
+        radial-gradient(2px 2px at 40px 70px, white, transparent),
+        radial-gradient(1px 1px at 90px 40px, white, transparent);
+    background-size: 100px 100px;
+    animation: snow-fall 3s linear infinite;
+}
+
+.cloud-overlay {
+    background-image:
+        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.1) 20%, transparent 50%),
+        radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.05) 30%, transparent 60%);
+    background-size: 80px 40px, 60px 30px;
+    animation: cloud-drift 10s ease-in-out infinite;
+}
+
+@keyframes rain-fall {
+    0% {
+        background-position: 0% 0%, 0% 0%;
+    }
+
+    100% {
+        background-position: 50% 100%, -50% 100%;
+    }
+}
+
+@keyframes snow-fall {
+    0% {
+        background-position: 0% 0%, 0% 0%, 0% 0%;
+    }
+
+    100% {
+        background-position: 10px 100px, -10px 100px, 5px 100px;
+    }
+}
+
+@keyframes cloud-drift {
+
+    0%,
+    100% {
+        background-position: 0% 0%, 100% 0%;
+    }
+
+    50% {
+        background-position: 100% 0%, 0% 0%;
+    }
 }
