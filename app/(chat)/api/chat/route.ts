@@ -200,24 +200,36 @@ export async function POST(request: Request) {
           system: systemPrompt({ selectedChatModel, requestHints }),
           messages: processedMessages,
           maxSteps: 5,
-          // Enable tool/function calling for different model capabilities
-          // Weather tool works with all models since it's a simple API call
-          // Document tools require OpenAI-compatible function calling
-          // Provide full tool suite universally to prevent unsupported-tool errors.
-          ...{
-            experimental_activeTools: [
-              'getWeather',
-              'createDocument',
-              'updateDocument',
-              'requestSuggestions',
-            ],
-            tools: {
-              getWeather,
-              createDocument: createDocument({ session, dataStream }),
-              updateDocument: updateDocument({ session, dataStream }),
-              requestSuggestions: requestSuggestions({ session, dataStream }),
-            },
-          },
+          // Only include function calling tools if the selected model is known to support them.
+          ...(function () {
+            const lowerId = selectedChatModel.toLowerCase();
+            const supportsTools =
+              // Most OpenAI, Anthropic, and Google models support tool calling.
+              lowerId.startsWith('openai/') ||
+              lowerId.startsWith('anthropic/') ||
+              lowerId.startsWith('google/') ||
+              // Explicitly allow any model id that contains 'tool' capability indicators.
+              // For now we assume free / open-source models (often suffixed with ":free") don't.
+              (!lowerId.endsWith(':free') &&
+                (lowerId.includes('gpt') || lowerId.includes('claude')));
+
+            return supportsTools
+              ? {
+                  experimental_activeTools: [
+                    'getWeather',
+                    'createDocument',
+                    'updateDocument',
+                    'requestSuggestions',
+                  ],
+                  tools: {
+                    getWeather,
+                    createDocument: createDocument({ session, dataStream }),
+                    updateDocument: updateDocument({ session, dataStream }),
+                    requestSuggestions: requestSuggestions({ session, dataStream }),
+                  },
+                }
+              : {};
+          })(),
           experimental_transform: smoothStream({ chunking: 'word' }),
           experimental_generateMessageId: generateUUID,
           onFinish: async ({ response }) => {
