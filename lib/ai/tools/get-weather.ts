@@ -1,159 +1,132 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 
-const ACCUWEATHER_API_KEY = 'Fzv3qavO5cHi6i9YBNkIT5PIjeDyDhDH';
+const WEATHER_API_KEY = process.env.WEATHER_API_KEY ?? '';
 
 export const getWeather = tool({
-  description: 'Get comprehensive current weather information for a location including temperature, humidity, wind, precipitation, clouds, and detailed conditions',
+  description: 'Get current weather and 5-day forecast for a location using WeatherAPI.com',
   parameters: z.object({
     latitude: z.number().describe('Latitude coordinate of the location'),
     longitude: z.number().describe('Longitude coordinate of the location'),
     location_name: z.string().optional().describe('Optional human-readable name of the location (e.g., "San Francisco, CA" or "London, UK")'),
   }),
   execute: async ({ latitude, longitude, location_name }) => {
+    if (!WEATHER_API_KEY) {
+      return {
+        error: 'Missing WEATHER_API_KEY environment variable. Please set it in your .env file.',
+      };
+    }
+
     try {
-      // Determine if location is in US for temperature unit
-      const isUSLocation = await isLocationInUS(latitude, longitude);
-      const temperatureUnit = isUSLocation ? 'fahrenheit' : 'celsius';
-      
-      // Step 1: Get location key from coordinates using AccuWeather GeoPosition API
-      const geoUrl = `http://dataservice.accuweather.com/locations/v1/cities/geoposition/search?apikey=${ACCUWEATHER_API_KEY}&q=${latitude},${longitude}&details=true`;
-      
-      const geoResponse = await fetch(geoUrl);
-      if (!geoResponse.ok) {
-        throw new Error(`AccuWeather GeoPosition API responded with status ${geoResponse.status}`);
+      const query = `${latitude},${longitude}`;
+      const days = 5;
+      const url = `https://api.weatherapi.com/v1/forecast.json?key=${WEATHER_API_KEY}&q=${query}&days=${days}&aqi=no&alerts=no`;
+
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`WeatherAPI responded with status ${res.status}`);
       }
-      
-      const locationData = await geoResponse.json();
-      const locationKey = locationData.Key;
-      const cityName = `${locationData.LocalizedName}, ${locationData.AdministrativeArea?.LocalizedName || locationData.Country?.LocalizedName}`;
-      
-      // Step 2: Get current conditions
-      const currentUrl = `http://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${ACCUWEATHER_API_KEY}&details=true`;
-      
-      const currentResponse = await fetch(currentUrl);
-      if (!currentResponse.ok) {
-        throw new Error(`AccuWeather Current Conditions API responded with status ${currentResponse.status}`);
-      }
-      
-      const currentData = await currentResponse.json();
-      const current = currentData[0]; // AccuWeather returns array with one element
-      
-      // Step 3: Get 5-day forecast
-      const forecastUrl = `http://dataservice.accuweather.com/forecasts/v1/daily/5day/${locationKey}?apikey=${ACCUWEATHER_API_KEY}&details=true&metric=${!isUSLocation}`;
-      
-      const forecastResponse = await fetch(forecastUrl);
-      if (!forecastResponse.ok) {
-        throw new Error(`AccuWeather Forecast API responded with status ${forecastResponse.status}`);
-      }
-      
-      const forecastData = await forecastResponse.json();
-      
-      // Step 4: Get hourly forecast (12 hours)
-      const hourlyUrl = `http://dataservice.accuweather.com/forecasts/v1/hourly/12hour/${locationKey}?apikey=${ACCUWEATHER_API_KEY}&details=true&metric=${!isUSLocation}`;
-      
-      const hourlyResponse = await fetch(hourlyUrl);
-      if (!hourlyResponse.ok) {
-        throw new Error(`AccuWeather Hourly API responded with status ${hourlyResponse.status}`);
-      }
-      
-      const hourlyData = await hourlyResponse.json();
-      
-      // Process AccuWeather data into our standardized format
-      const processedData = {
+
+      const data = await res.json();
+
+      const { location, current, forecast } = data as any;
+      const isUS =
+        (location.country as string).toLowerCase().includes('united states');
+
+      const processed = {
         location: {
-          name: location_name || cityName,
-          latitude: parseFloat(locationData.GeoPosition?.Latitude || latitude),
-          longitude: parseFloat(locationData.GeoPosition?.Longitude || longitude),
-          timezone: locationData.TimeZone?.Name || 'UTC',
-          elevation: locationData.GeoPosition?.Elevation?.Metric?.Value || 0
+          name: location_name || `${location.name}, ${location.region || location.country}`,
+          latitude: location.lat,
+          longitude: location.lon,
+          timezone: location.tz_id,
+          elevation: 0,
         },
         current: {
-          time: current.LocalObservationDateTime,
-          temperature: isUSLocation ? current.Temperature.Imperial.Value : current.Temperature.Metric.Value,
-          feels_like: isUSLocation ? current.RealFeelTemperature.Imperial.Value : current.RealFeelTemperature.Metric.Value,
-          humidity: current.RelativeHumidity,
-          pressure: isUSLocation ? current.Pressure.Imperial.Value : current.Pressure.Metric.Value,
+          time: current.last_updated,
+          temperature: isUS ? current.temp_f : current.temp_c,
+          feels_like: isUS ? current.feelslike_f : current.feelslike_c,
+          humidity: current.humidity,
+          pressure: current.pressure_mb,
           wind: {
-            speed: isUSLocation ? current.Wind.Speed.Imperial.Value : current.Wind.Speed.Metric.Value,
-            direction: current.Wind.Direction.Degrees,
-            gusts: current.WindGust?.Speed ? (isUSLocation ? current.WindGust.Speed.Imperial.Value : current.WindGust.Speed.Metric.Value) : 0
+            speed: isUS ? current.wind_mph : current.wind_kph,
+            direction: current.wind_degree,
+            gusts: isUS ? current.gust_mph : current.gust_kph,
           },
           precipitation: {
-            current: isUSLocation ? (current.PrecipitationSummary?.Precipitation?.Imperial?.Value || 0) : (current.PrecipitationSummary?.Precipitation?.Metric?.Value || 0),
-            rain: 0, // AccuWeather doesn't separate rain/snow in current conditions
+            current: current.precip_mm,
+            rain: current.precip_mm,
             showers: 0,
-            snow: 0
+            snow: 0,
           },
           conditions: {
-            weather_code: current.WeatherIcon, // AccuWeather uses different icon codes
-            cloud_cover: current.CloudCover || 0,
-            visibility: isUSLocation ? (current.Visibility?.Imperial?.Value || 10) : (current.Visibility?.Metric?.Value || 16),
-            is_day: current.IsDayTime
+            weather_code: current.condition.code,
+            cloud_cover: current.cloud,
+            visibility: isUS ? current.vis_miles : current.vis_km,
+            is_day: Boolean(current.is_day),
           },
-          weather_description: current.WeatherText,
-          temperature_unit: temperatureUnit === 'fahrenheit' ? '°F' : '°C',
-          location_country: locationData.Country?.LocalizedName || 'Unknown'
+          weather_description: current.condition.text,
+          temperature_unit: isUS ? '°F' : '°C',
+          location_country: location.country,
         },
-        hourly_forecast: hourlyData.map((hour: any) => ({
-          time: hour.DateTime,
-          temperature: isUSLocation ? hour.Temperature.Value : hour.Temperature.Value,
-          feels_like: isUSLocation ? hour.RealFeelTemperature.Value : hour.RealFeelTemperature.Value,
-          humidity: hour.RelativeHumidity,
-          precipitation_probability: hour.PrecipitationProbability,
-          precipitation: isUSLocation ? (hour.TotalLiquid?.Value || 0) : (hour.TotalLiquid?.Value || 0),
-          weather_code: hour.WeatherIcon,
-          weather_description: hour.IconPhrase,
-          cloud_cover: hour.CloudCover || 0,
-          wind_speed: isUSLocation ? hour.Wind.Speed.Value : hour.Wind.Speed.Value,
-          wind_direction: hour.Wind.Direction.Degrees,
-          is_day: hour.IsDaylight
+        hourly_forecast: forecast.forecastday[0].hour.map((h: any) => ({
+          time: h.time,
+          temperature: isUS ? h.temp_f : h.temp_c,
+          feels_like: isUS ? h.feelslike_f : h.feelslike_c,
+          humidity: h.humidity,
+          precipitation_probability: h.chance_of_rain || 0,
+          precipitation: h.precip_mm,
+          weather_code: h.condition.code,
+          weather_description: h.condition.text,
+          cloud_cover: h.cloud,
+          wind_speed: isUS ? h.wind_mph : h.wind_kph,
+          wind_direction: h.wind_degree,
+          is_day: Boolean(h.is_day),
         })),
-        daily_forecast: forecastData.DailyForecasts.map((day: any) => ({
-          date: day.Date,
+        daily_forecast: forecast.forecastday.map((d: any) => ({
+          date: d.date,
           temperature: {
-            max: isUSLocation ? day.Temperature.Maximum.Value : day.Temperature.Maximum.Value,
-            min: isUSLocation ? day.Temperature.Minimum.Value : day.Temperature.Minimum.Value
+            max: isUS ? d.day.maxtemp_f : d.day.maxtemp_c,
+            min: isUS ? d.day.mintemp_f : d.day.mintemp_c,
           },
           feels_like: {
-            max: isUSLocation ? day.RealFeelTemperature.Maximum.Value : day.RealFeelTemperature.Maximum.Value,
-            min: isUSLocation ? day.RealFeelTemperature.Minimum.Value : day.RealFeelTemperature.Minimum.Value
+            max: isUS ? d.day.avgtemp_f : d.day.avgtemp_c,
+            min: isUS ? d.day.mintemp_f : d.day.mintemp_c,
           },
           precipitation: {
-            sum: isUSLocation ? (day.Day?.TotalLiquid?.Value || 0) : (day.Day?.TotalLiquid?.Value || 0),
-            rain_sum: isUSLocation ? (day.Day?.Rain?.Value || 0) : (day.Day?.Rain?.Value || 0),
-            hours: day.Day?.HoursOfPrecipitation || 0,
-            probability_max: Math.max(day.Day?.PrecipitationProbability || 0, day.Night?.PrecipitationProbability || 0)
+            sum: d.day.totalprecip_mm,
+            rain_sum: d.day.totalprecip_mm,
+            hours: d.day.daily_will_it_rain,
+            probability_max: d.day.daily_chance_of_rain,
           },
           wind: {
-            max_speed: isUSLocation ? day.Day?.Wind?.Speed?.Value || 0 : day.Day?.Wind?.Speed?.Value || 0,
-            max_gusts: isUSLocation ? (day.Day?.WindGust?.Speed?.Value || 0) : (day.Day?.WindGust?.Speed?.Value || 0),
-            dominant_direction: day.Day?.Wind?.Direction?.Degrees || 0
+            max_speed: isUS ? d.day.maxwind_mph : d.day.maxwind_kph,
+            max_gusts: 0,
+            dominant_direction: 0,
           },
           sun: {
-            sunrise: day.Sun?.Rise || '',
-            sunset: day.Sun?.Set || ''
+            sunrise: d.astro.sunrise,
+            sunset: d.astro.sunset,
           },
-          weather_code: day.Day?.Icon || 1,
-          weather_description: day.Day?.IconPhrase || 'Partly sunny',
-          uv_index: day.AirAndPollen?.find((item: any) => item.Name === 'UVIndex')?.Value || 0
+          weather_code: d.day.condition.code,
+          weather_description: d.day.condition.text,
+          uv_index: d.day.uv,
         })),
         units: {
-          temperature: temperatureUnit === 'fahrenheit' ? '°F' : '°C',
-          wind_speed: isUSLocation ? 'mph' : 'km/h',
-          precipitation: isUSLocation ? 'in' : 'mm',
-          pressure: isUSLocation ? 'inHg' : 'mb',
-          visibility: isUSLocation ? 'mi' : 'km'
-        }
-      };
+          temperature: isUS ? '°F' : '°C',
+          wind_speed: isUS ? 'mph' : 'km/h',
+          precipitation: 'mm',
+          pressure: 'mb',
+          visibility: isUS ? 'mi' : 'km',
+        },
+      } as const;
 
-      return processedData;
-    } catch (error) {
-      console.error('AccuWeather API error:', error);
+      return processed;
+    } catch (err) {
+      console.error('WeatherAPI error:', err);
       return {
-        error: 'Failed to fetch weather data from AccuWeather',
-        message: error instanceof Error ? error.message : 'Unknown error occurred',
-        location: location_name || `${latitude}, ${longitude}`
+        error: 'Failed to fetch weather data from WeatherAPI',
+        message: err instanceof Error ? err.message : 'Unknown error',
+        location: location_name || `${latitude}, ${longitude}`,
       };
     }
   },
