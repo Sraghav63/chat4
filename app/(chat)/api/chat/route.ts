@@ -24,6 +24,7 @@ import { updateDocument } from '@/lib/ai/tools/update-document';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
 import { getStocks } from '@/lib/ai/tools/get-stocks';
+import { webSearch } from '@/lib/ai/tools/web-search';
 import { isProductionEnvironment } from '@/lib/constants';
 import { myProvider } from '@/lib/ai/providers';
 import { entitlementsByUserType } from '@/lib/ai/entitlements';
@@ -217,6 +218,7 @@ export async function POST(request: Request) {
             return supportsTools
               ? {
                   experimental_activeTools: [
+                    'webSearch',
                     'getWeather',
                     'getStocks',
                     'createDocument',
@@ -224,6 +226,7 @@ export async function POST(request: Request) {
                     'requestSuggestions',
                   ],
                   tools: {
+                    webSearch,
                     getWeather,
                     getStocks,
                     createDocument: createDocument({ session, dataStream }),

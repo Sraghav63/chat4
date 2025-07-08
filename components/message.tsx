@@ -12,6 +12,7 @@ import { MessageActions } from './message-actions';
 import { PreviewAttachment } from './preview-attachment';
 import { Stocks } from './stocks';
 import { Weather } from './weather';
+import { WebSearchResults } from './web-search-results';
 import equal from 'fast-deep-equal';
 import { cn, sanitizeText } from '@/lib/utils';
 import { Button } from './ui/button';
@@ -44,6 +45,17 @@ const PurePreviewMessage = ({
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
   const router = useRouter();
+
+  // Extract search results from webSearch tool invocations
+  const searchResults = message.parts?.reduce((acc: any[], part) => {
+    if (part.type === 'tool-invocation' && 
+        part.toolInvocation.toolName === 'webSearch' && 
+        part.toolInvocation.state === 'result' &&
+        part.toolInvocation.result?.results) {
+      return [...acc, ...part.toolInvocation.result.results];
+    }
+    return acc;
+  }, []);
 
   const handleBranch = async (messageId: string) => {
     try {
@@ -159,7 +171,7 @@ const PurePreviewMessage = ({
                             message.role === 'user',
                         })}
                       >
-                        <Markdown>{sanitizeText(part.text)}</Markdown>
+                        <Markdown searchResults={searchResults}>{sanitizeText(part.text)}</Markdown>
                       </div>
                     </div>
                   );
@@ -193,10 +205,12 @@ const PurePreviewMessage = ({
                     <div
                       key={toolCallId}
                       className={cx({
-                        skeleton: ['getWeather', 'getStocks'].includes(toolName),
+                        skeleton: ['getWeather', 'getStocks', 'webSearch'].includes(toolName),
                       })}
                     >
-                      {toolName === 'getWeather' ? (
+                      {toolName === 'webSearch' ? (
+                        <WebSearchResults isLoading={true} />
+                      ) : toolName === 'getWeather' ? (
                         <Weather />
                       ) : toolName === 'getStocks' ? (
                         <Stocks />
@@ -224,7 +238,9 @@ const PurePreviewMessage = ({
 
                   return (
                     <div key={toolCallId}>
-                      {toolName === 'getWeather' ? (
+                      {toolName === 'webSearch' ? (
+                        <WebSearchResults searchData={result} />
+                      ) : toolName === 'getWeather' ? (
                         <Weather weatherAtLocation={result} />
                       ) : toolName === 'getStocks' ? (
                         <Stocks stockData={result} />
@@ -287,7 +303,7 @@ export const PreviewMessage = memo(
   },
 );
 
-export const ThinkingMessage = () => {
+export const ThinkingMessage = ({ isSearching = false }: { isSearching?: boolean }) => {
   const role = 'assistant';
 
   return (
@@ -311,8 +327,19 @@ export const ThinkingMessage = () => {
         </div>
 
         <div className="flex flex-col gap-2 w-full">
-          <div className="flex flex-col gap-4 text-muted-foreground">
-            Hmm...
+          <div className="flex items-center gap-2 text-muted-foreground">
+            {isSearching ? (
+              <>
+                <div className="flex items-center gap-1">
+                  <div className="w-1 h-1 bg-current rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
+                  <div className="w-1 h-1 bg-current rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
+                  <div className="w-1 h-1 bg-current rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
+                </div>
+                <span className="ml-2">Searching</span>
+              </>
+            ) : (
+              'Hmm...'
+            )}
           </div>
         </div>
       </div>

@@ -1232,3 +1232,18 @@ export const BranchIcon = ({ size = 16 }: { size?: number }) => (
     <path d="M8 8h2" stroke="currentColor" strokeWidth="1.5" fill="none" />
   </svg>
 );
+
+export const ExternalLinkIcon = ({ size = 16 }: { size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6m4-3h6m0 0v6m0-6L9 9" />
+  </svg>
+);

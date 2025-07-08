@@ -87,5 +87,11 @@ export function getTrailingMessageId({
 }
 
 export function sanitizeText(text: string) {
-  return text.replace('<has_function_call>', '');
+  // Escape currency amounts like $5 or $19.99 so remark-math doesn't treat them as LaTeX.
+  // This regex finds a dollar sign followed by digits (optionally with commas or decimals)
+  // that is NOT immediately followed by another dollar sign (to avoid $$ math blocks).
+  // It also ensures we keep any leading whitespace.
+  const escapedCurrency = text.replace(/(^|\s)\$(\d[\d,.]*)(?=\s|[?!.,:]|$)/g, (match, prefix, amount) => `${prefix}\\$${amount}`);
+
+  return escapedCurrency.replace('<has_function_call>', '');
 }

@@ -68,6 +68,21 @@ function PureArtifactMessages({
         messages.length > 0 &&
         messages[messages.length - 1].role === 'user' && <ThinkingMessage />}
 
+      {status === 'streaming' && messages.length > 0 && (() => {
+        const lastMessage = messages[messages.length - 1];
+        const isSearching = lastMessage.role === 'assistant' && 
+          lastMessage.parts?.some(part => 
+            part.type === 'tool-invocation' && 
+            part.toolInvocation.toolName === 'webSearch' && 
+            part.toolInvocation.state === 'call'
+          );
+        
+        if (isSearching) {
+          return <ThinkingMessage isSearching={true} />;
+        }
+        return null;
+      })()}
+
       <motion.div
         ref={messagesEndRef}
         className="shrink-0 min-w-[24px] min-h-[24px]"

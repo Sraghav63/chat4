@@ -3,8 +3,17 @@ import React, { memo } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { CodeBlock } from './code-block';
+import { Citation } from './citation';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+
+interface SearchResult {
+  id: number;
+  title: string;
+  url: string;
+  domain: string;
+  publishedDate?: string;
+}
 
 const components: Partial<Components> = {
   // @ts-expect-error
@@ -112,12 +121,67 @@ const remarkPlugins = [remarkGfm, remarkMath];
 
 const rehypePlugins = [rehypeKatex];
 
-const NonMemoizedMarkdown = ({ children }: { children: string }) => {
+// Function to process text and replace citations with Citation components
+function processCitations(text: string, searchResults?: SearchResult[]): React.ReactNode[] {
+  if (!searchResults || searchResults.length === 0) {
+    return [text];
+  }
+
+  // Split by citation pattern [1], [2], etc.
+  const parts = text.split(/(\[\d+\])/g);
+  
+  return parts.map((part, index) => {
+    const citationMatch = part.match(/^\[(\d+)\]$/);
+    if (citationMatch) {
+      const citationNumber = parseInt(citationMatch[1], 10);
+      const searchResult = searchResults.find(result => result.id === citationNumber);
+      
+      if (searchResult) {
+        return (
+          <Citation
+            key={`citation-${index}`}
+            number={searchResult.id}
+            title={searchResult.title}
+            url={searchResult.url}
+            domain={searchResult.domain}
+            publishedDate={searchResult.publishedDate}
+          />
+        );
+      }
+    }
+    return part;
+  });
+}
+
+// Custom text renderer that processes citations
+function createTextRenderer(searchResults?: SearchResult[]) {
+  return ({ children }: { children: string }) => {
+    if (typeof children === 'string' && searchResults) {
+      const processedNodes = processCitations(children, searchResults);
+      return <>{processedNodes}</>;
+    }
+    return <>{children}</>;
+  };
+}
+
+const NonMemoizedMarkdown = ({ 
+  children, 
+  searchResults 
+}: { 
+  children: string;
+  searchResults?: SearchResult[];
+}) => {
+  // Create components with custom text renderer if we have search results
+  const customComponents = searchResults ? {
+    ...components,
+    text: createTextRenderer(searchResults),
+  } : components;
+
   return (
     <ReactMarkdown
       remarkPlugins={remarkPlugins}
       rehypePlugins={rehypePlugins}
-      components={components}
+      components={customComponents}
     >
       {children}
     </ReactMarkdown>
@@ -126,5 +190,7 @@ const NonMemoizedMarkdown = ({ children }: { children: string }) => {
 
 export const Markdown = memo(
   NonMemoizedMarkdown,
-  (prevProps, nextProps) => prevProps.children === nextProps.children,
+  (prevProps, nextProps) => 
+    prevProps.children === nextProps.children && 
+    prevProps.searchResults === nextProps.searchResults,
 );
