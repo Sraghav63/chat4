@@ -155,13 +155,18 @@ function processCitations(text: string, searchResults?: SearchResult[]): React.R
 
 // Custom text renderer that processes citations
 function createTextRenderer(searchResults?: SearchResult[]) {
-  return ({ children }: { children: string }) => {
+  // Named component returned so that ESLint "react/display-name" rule is satisfied
+  const TextRenderer = ({ children }: { children: string }) => {
     if (typeof children === 'string' && searchResults) {
       const processedNodes = processCitations(children, searchResults);
       return <>{processedNodes}</>;
     }
     return <>{children}</>;
   };
+  // Explicitly set a display name for better debugging and to appease ESLint
+  TextRenderer.displayName = 'MarkdownTextRenderer';
+
+  return TextRenderer;
 }
 
 const NonMemoizedMarkdown = ({ 

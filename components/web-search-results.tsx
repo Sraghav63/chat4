@@ -85,7 +85,7 @@ export function WebSearchResults({ searchData, isLoading = false }: WebSearchRes
       <div className="flex flex-col gap-2 mb-4 p-3 border rounded-lg bg-muted/50">
         <div className="text-sm font-medium">No search results found</div>
         <div className="text-sm text-muted-foreground">
-          Query: "{searchData.query}"
+          Query: &quot;{searchData.query}&quot;
         </div>
       </div>
     );
@@ -94,7 +94,7 @@ export function WebSearchResults({ searchData, isLoading = false }: WebSearchRes
   return (
     <div className="flex flex-col gap-3 mb-4">
       <div className="text-sm text-muted-foreground">
-        Found {searchData.totalResults} results for "{searchData.query}"
+        Found {searchData.totalResults} results for &quot;{searchData.query}&quot;
       </div>
       
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
