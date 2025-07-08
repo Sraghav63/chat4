@@ -166,8 +166,8 @@ function createTextRenderer(searchResults?: SearchResult[]) {
   // Explicitly set a display name for better debugging and to appease ESLint
   TextRenderer.displayName = 'MarkdownTextRenderer';
 
-  // Cast to any/ElementType to satisfy ReactMarkdown Components typing
-  return TextRenderer as unknown as React.ElementType;
+  // Cast to Components['text'] so TypeScript accepts this as a valid renderer for the "text" key
+  return TextRenderer as unknown as Components['text'];
 }
 
 const NonMemoizedMarkdown = ({ 
@@ -178,16 +178,16 @@ const NonMemoizedMarkdown = ({
   searchResults?: SearchResult[];
 }) => {
   // Create components with custom text renderer if we have search results
-  const customComponents = searchResults ? {
-    ...components,
-    text: createTextRenderer(searchResults),
-  } : components;
+  const customComponents: Components = searchResults ? {
+    ...(components as Components),
+    text: createTextRenderer(searchResults) as Components['text'],
+  } : (components as Components);
 
   return (
     <ReactMarkdown
       remarkPlugins={remarkPlugins}
       rehypePlugins={rehypePlugins}
-      components={customComponents}
+      components={customComponents as Components}
     >
       {children}
     </ReactMarkdown>
