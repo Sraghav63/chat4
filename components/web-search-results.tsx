@@ -39,8 +39,8 @@ interface WebSearchResultsProps {
 export function WebSearchResults({ searchData, isLoading = false }: WebSearchResultsProps) {
   if (isLoading || !searchData) {
     return (
-      <div className="flex flex-col gap-3 mb-4">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="flex flex-col gap-3 mb-4 w-full">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground px-1">
           <div className="flex items-center gap-1">
             <div className="w-1 h-1 bg-current rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
             <div className="w-1 h-1 bg-current rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
@@ -48,15 +48,15 @@ export function WebSearchResults({ searchData, isLoading = false }: WebSearchRes
           </div>
           <span>Searching the web...</span>
         </div>
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="flex-shrink-0 w-80 p-3 border rounded-lg animate-pulse">
-              <div className="flex items-start gap-3 h-full">
+            <div key={i} className="flex-shrink-0 w-64 sm:w-72 md:w-80 p-2 md:p-3 border rounded-lg animate-pulse">
+              <div className="flex items-start gap-2 md:gap-3 h-full">
                 <div className="w-6 h-6 bg-muted rounded-full"></div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-4 h-4 bg-muted rounded"></div>
-                    <div className="h-3 bg-muted rounded w-20"></div>
+                    <div className="h-3 bg-muted rounded w-16 sm:w-20"></div>
                   </div>
                   <div className="h-4 bg-muted rounded w-full mb-2"></div>
                   <div className="h-3 bg-muted rounded w-3/4"></div>
@@ -92,28 +92,28 @@ export function WebSearchResults({ searchData, isLoading = false }: WebSearchRes
   }
 
   return (
-    <div className="flex flex-col gap-3 mb-4">
-      <div className="text-sm text-muted-foreground">
+    <div className="flex flex-col gap-3 mb-4 w-full">
+      <div className="text-sm text-muted-foreground px-1">
         Found {searchData.totalResults} results for &quot;{searchData.query}&quot;
       </div>
       
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide w-full">
+      <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
         {searchData.results.slice(0, 10).map((result) => (
           <a
             key={result.id}
             href={result.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex-shrink-0 w-64 sm:w-72 md:w-80 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+            className="group flex-shrink-0 w-64 sm:w-72 md:w-80 p-2 md:p-3 border rounded-lg hover:bg-muted/50 transition-colors"
           >
-            <div className="flex items-start gap-3 h-full">
+            <div className="flex items-start gap-2 md:gap-3 h-full">
               <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-medium shrink-0">
                 {result.id}
               </div>
               
               <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-start justify-between gap-1 md:gap-2 mb-1 md:mb-2">
+                  <div className="flex items-center gap-1 md:gap-2 min-w-0">
                     <img 
                       src={`https://www.google.com/s2/favicons?domain=${result.domain}&sz=16`}
                       alt=""
@@ -127,8 +127,8 @@ export function WebSearchResults({ searchData, isLoading = false }: WebSearchRes
                     </span>
                     {result.publishedDate && (
                       <>
-                        <span className="text-xs text-muted-foreground">•</span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-muted-foreground hidden sm:inline">•</span>
+                        <span className="text-xs text-muted-foreground hidden sm:inline">
                           {new Date(result.publishedDate).toLocaleDateString()}
                         </span>
                       </>
@@ -137,13 +137,18 @@ export function WebSearchResults({ searchData, isLoading = false }: WebSearchRes
                   <ExternalLinkIcon size={12} />
                 </div>
                 
-                <h3 className="font-medium text-sm group-hover:text-primary transition-colors mb-2 overflow-hidden text-ellipsis">
+                <h3 className="font-medium text-sm group-hover:text-primary transition-colors mb-1 md:mb-2 overflow-hidden text-ellipsis">
                   {result.title}
                 </h3>
                 
                 {result.summary && (
                   <p className="text-xs text-muted-foreground overflow-hidden text-ellipsis">
-                    {result.summary.length > 120 ? result.summary.substring(0, 120) + '...' : result.summary}
+                    <span className="sm:hidden">
+                      {result.summary.length > 80 ? result.summary.substring(0, 80) + '...' : result.summary}
+                    </span>
+                    <span className="hidden sm:inline">
+                      {result.summary.length > 120 ? result.summary.substring(0, 120) + '...' : result.summary}
+                    </span>
                   </p>
                 )}
               </div>

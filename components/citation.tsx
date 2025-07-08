@@ -33,7 +33,7 @@ export function Citation({ number, title, url, domain, publishedDate }: Citation
       
       {isHovered && (
         <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-50 pointer-events-none">
-          <div className="bg-background border border-border rounded-lg shadow-lg p-3 max-w-[90vw] w-[90vw] sm:w-72 pointer-events-auto">
+          <div className="bg-background border border-border rounded-lg shadow-lg p-3 w-72 max-w-sm pointer-events-auto">
             <div className="flex items-start justify-between gap-2 mb-2">
               <div className="flex items-center gap-2 min-w-0">
                 <img 
