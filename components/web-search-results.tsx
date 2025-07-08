@@ -97,14 +97,14 @@ export function WebSearchResults({ searchData, isLoading = false }: WebSearchRes
         Found {searchData.totalResults} results for &quot;{searchData.query}&quot;
       </div>
       
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide w-full">
         {searchData.results.slice(0, 10).map((result) => (
           <a
             key={result.id}
             href={result.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex-shrink-0 w-80 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+            className="group flex-shrink-0 w-64 sm:w-72 md:w-80 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
           >
             <div className="flex items-start gap-3 h-full">
               <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-medium shrink-0">
