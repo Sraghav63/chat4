@@ -166,7 +166,8 @@ function createTextRenderer(searchResults?: SearchResult[]) {
   // Explicitly set a display name for better debugging and to appease ESLint
   TextRenderer.displayName = 'MarkdownTextRenderer';
 
-  return TextRenderer;
+  // Cast to any/ElementType to satisfy ReactMarkdown Components typing
+  return TextRenderer as unknown as React.ElementType;
 }
 
 const NonMemoizedMarkdown = ({ 
