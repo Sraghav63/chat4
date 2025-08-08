@@ -40,8 +40,8 @@ type OpenRouterModel = {
   };
   context_length?: number;
   pricing?: {
-    prompt: string;
-    completion: string;
+    prompt: string | number;
+    completion: string | number;
   };
 };
 
@@ -119,8 +119,7 @@ const getModelIcon = (modelId: string, modelName: string) => {
   const commonImgProps = {
     width: 24,
     height: 24,
-    className: "text-foreground dark:invert",
-    style: { filter: 'brightness(0)' } as React.CSSProperties,
+    className: 'invert dark:invert-0',
   } as const;
 
   // Google models
@@ -250,26 +249,43 @@ const getModelIcon = (modelId: string, modelName: string) => {
 const getPricingTier = (model: OpenRouterModel) => {
   if (!model.pricing) return 'unknown';
   
-  const promptPrice = parseFloat(model.pricing.prompt) || 0;
-  const completionPrice = parseFloat(model.pricing.completion) || 0;
-  const avgPrice = (promptPrice + completionPrice) / 2;
+  // OpenRouter returns pricing per token, convert to per 1M tokens for calculation
+  const promptPricePerToken = typeof model.pricing.prompt === 'string' 
+    ? parseFloat(model.pricing.prompt) || 0
+    : (model.pricing.prompt as number) || 0;
+  const completionPricePerToken = typeof model.pricing.completion === 'string'
+    ? parseFloat(model.pricing.completion) || 0
+    : (model.pricing.completion as number) || 0;
+  
+  const avgPricePer1M = ((promptPricePerToken + completionPricePerToken) / 2) * 1000000;
   
   // Price thresholds (per 1M tokens)
-  if (avgPrice <= 0.5) return 'cheap';      // Green - very cheap/free
-  if (avgPrice <= 2) return 'moderate';     // Yellow - moderate
-  return 'expensive';                       // Red - expensive
+  if (avgPricePer1M <= 0.5) return 'cheap';      // Green - very cheap/free
+  if (avgPricePer1M <= 5) return 'moderate';     // Yellow - moderate
+  return 'expensive';                             // Red - expensive
 };
 
 // Format pricing for display
 const formatPricing = (model: OpenRouterModel) => {
   if (!model.pricing) return 'Pricing unavailable';
   
-  const prompt = model.pricing.prompt;
-  const completion = model.pricing.completion;
+  // OpenRouter returns pricing per token, we need to convert to per 1M tokens
+  const promptPricePerToken = typeof model.pricing.prompt === 'string' 
+    ? parseFloat(model.pricing.prompt)
+    : model.pricing.prompt;
+  const completionPricePerToken = typeof model.pricing.completion === 'string'
+    ? parseFloat(model.pricing.completion)
+    : model.pricing.completion;
   
-  if (prompt === '0' && completion === '0') return 'Free';
+  if (promptPricePerToken === 0 && completionPricePerToken === 0) {
+    return 'Free';
+  }
   
-  return `$${prompt}/$${completion} per 1M tokens`;
+  // Convert to per 1M tokens and format nicely
+  const promptPer1M = (promptPricePerToken * 1000000).toFixed(2);
+  const completionPer1M = (completionPricePerToken * 1000000).toFixed(2);
+  
+  return `$${promptPer1M}/$${completionPer1M} per 1M tokens`;
 };
 
 // Pricing dot component
@@ -407,7 +423,28 @@ export function ModelSelector({
     }
 
     // Build a minimal stand-in list from DEFAULT_IDS so UI never appears empty.
-    return DEFAULT_IDS.map((id) => ({ id, name: id.split('/')[1] ?? id })) as OpenRouterModel[];
+    // Add realistic pricing data for common models (per token, like OpenRouter API)
+    return DEFAULT_IDS.map((id) => {
+      const name = id.split('/')[1] ?? id;
+      let pricing = { prompt: 0, completion: 0 }; // Default to free
+      
+      // Add realistic pricing for known models (per token)
+      if (id.includes('gpt-4o')) {
+        pricing = { prompt: 0.0000025, completion: 0.00001 };
+      } else if (id.includes('gpt-4')) {
+        pricing = { prompt: 0.00003, completion: 0.00006 };
+      } else if (id.includes('claude-3-opus')) {
+        pricing = { prompt: 0.000015, completion: 0.000075 };
+      } else if (id.includes('claude-sonnet-4')) {
+        pricing = { prompt: 0.000003, completion: 0.000015 };
+      } else if (id.includes('gemini-2')) {
+        pricing = { prompt: 0.000001, completion: 0.000005 };
+      } else if (id.includes('grok-3')) {
+        pricing = { prompt: 0.000002, completion: 0.00001 };
+      }
+      
+      return { id, name, pricing } as OpenRouterModel;
+    });
   }, [data]);
 
   const filteredModels = useMemo(() => {
