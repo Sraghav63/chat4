@@ -33,28 +33,28 @@ export function MessageReasoning({
 
   return (
     <div className="flex flex-col">
-      {isLoading ? (
-        <div className="flex flex-row gap-2 items-center">
-          <div className="font-medium">Reasoning</div>
+      <div className="flex flex-row gap-2 items-center">
+        <div className="font-medium">
+          {isLoading ? 'Reasoning' : 'Reasoned for a few seconds'}
+        </div>
+        {isLoading && (
           <div className="animate-spin">
             <LoaderIcon />
           </div>
-        </div>
-      ) : (
-        <div className="flex flex-row gap-2 items-center">
-          <div className="font-medium">Reasoned for a few seconds</div>
-          <button
-            data-testid="message-reasoning-toggle"
-            type="button"
-            className="cursor-pointer"
-            onClick={() => {
-              setIsExpanded(!isExpanded);
-            }}
-          >
+        )}
+        <button
+          data-testid="message-reasoning-toggle"
+          type="button"
+          className="cursor-pointer"
+          onClick={() => {
+            setIsExpanded(!isExpanded);
+          }}
+        >
+          <div className={`transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`}>
             <ChevronDownIcon />
-          </button>
-        </div>
-      )}
+          </div>
+        </button>
+      </div>
 
       <AnimatePresence initial={false}>
         {isExpanded && (
