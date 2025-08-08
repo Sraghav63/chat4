@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useOptimistic, startTransition, useEffect } from 'react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import useSWR from 'swr';
 import { saveChatModelAsCookie } from '@/app/(chat)/actions';
 import { Button } from '@/components/ui/button';
@@ -58,6 +59,7 @@ const DEFAULT_IDS = [
   'meta-llama/llama-4-maverick:free',
   'anthropic/claude-sonnet-4',
   'google/gemini-2.0-flash-001',
+  'openai/gpt-5',
   'openai/gpt-4.1-mini',
   'openai/gpt-4.1',
   'openai/o4-mini',
@@ -117,8 +119,8 @@ const getModelIcon = (modelId: string, modelName: string) => {
   const commonImgProps = {
     width: 24,
     height: 24,
-    className: "text-foreground",
-    style: { filter: 'brightness(0) invert(1)' } as React.CSSProperties,
+    className: "text-foreground dark:invert",
+    style: { filter: 'brightness(0)' } as React.CSSProperties,
   } as const;
 
   // Google models
@@ -241,6 +243,50 @@ const getModelIcon = (modelId: string, modelName: string) => {
     <div className={`${ICON_CONTAINER_CLASSES} bg-muted text-muted-foreground text-xs font-medium`}>
       {provider.charAt(0).toUpperCase()}
     </div>
+  );
+};
+
+// Get pricing tier based on model pricing
+const getPricingTier = (model: OpenRouterModel) => {
+  if (!model.pricing) return 'unknown';
+  
+  const promptPrice = parseFloat(model.pricing.prompt) || 0;
+  const completionPrice = parseFloat(model.pricing.completion) || 0;
+  const avgPrice = (promptPrice + completionPrice) / 2;
+  
+  // Price thresholds (per 1M tokens)
+  if (avgPrice <= 0.5) return 'cheap';      // Green - very cheap/free
+  if (avgPrice <= 2) return 'moderate';     // Yellow - moderate
+  return 'expensive';                       // Red - expensive
+};
+
+// Format pricing for display
+const formatPricing = (model: OpenRouterModel) => {
+  if (!model.pricing) return 'Pricing unavailable';
+  
+  const prompt = model.pricing.prompt;
+  const completion = model.pricing.completion;
+  
+  if (prompt === '0' && completion === '0') return 'Free';
+  
+  return `$${prompt}/$${completion} per 1M tokens`;
+};
+
+// Pricing dot component
+const PricingDot = ({ model }: { model: OpenRouterModel }) => {
+  const tier = getPricingTier(model);
+  const colors = {
+    cheap: 'bg-green-500',
+    moderate: 'bg-yellow-500', 
+    expensive: 'bg-red-500',
+    unknown: 'bg-gray-400'
+  };
+  
+  return (
+    <div 
+      className={`w-2 h-2 rounded-full ${colors[tier]}`}
+      title={formatPricing(model)}
+    />
   );
 };
 
@@ -461,21 +507,23 @@ export function ModelSelector({
     };
 
     return (
-      <div
-        key={id}
-        className={cn(
-          'relative group rounded-xl border transition-all duration-200 cursor-pointer',
-          'bg-card hover:bg-accent/50 p-4 min-h-[140px] flex flex-col',
-          isSelected 
-            ? 'border-primary bg-primary/5' 
-            : 'border-border hover:border-primary/50'
-        )}
-        onClick={handleModelSelect}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          toggleFav(id);
-        }}
-      >
+      <TooltipProvider key={id}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              className={cn(
+                'relative group rounded-xl border transition-all duration-200 cursor-pointer',
+                'bg-card hover:bg-accent/50 p-4 min-h-[140px] flex flex-col',
+                isSelected 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border-border hover:border-primary/50'
+              )}
+              onClick={handleModelSelect}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                toggleFav(id);
+              }}
+            >
         {/* Header with icon and favorite */}
         <div className="flex items-start justify-between mb-3">
           {getModelIcon(id, name)}
@@ -509,13 +557,35 @@ export function ModelSelector({
         {/* Capabilities and selection indicator */}
         <div className="flex items-center justify-between mt-auto">
           <div className="flex gap-1 items-center">
+            <PricingDot model={model} />
             {capabilities}
           </div>
           {isSelected && (
             <CheckCircleFillIcon size={16} />
           )}
         </div>
-      </div>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs">
+            <div className="space-y-2">
+              <div className="font-medium">{prettyName(id, name)}</div>
+              <div className="text-sm text-muted-foreground">
+                {formatPricing(model)}
+              </div>
+              {model.description && (
+                <div className="text-xs text-muted-foreground">
+                  {model.description}
+                </div>
+              )}
+              {model.context_length && (
+                <div className="text-xs text-muted-foreground">
+                  Context: {model.context_length.toLocaleString()} tokens
+                </div>
+              )}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   };
 
