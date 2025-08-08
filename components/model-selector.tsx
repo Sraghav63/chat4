@@ -119,10 +119,7 @@ const getModelIcon = (modelId: string, modelName: string) => {
   const commonImgProps = {
     width: 24,
     height: 24,
-    style: {
-      filter: 'brightness(0) invert(1)'
-    } as React.CSSProperties,
-    className: 'dark:invert',
+    className: 'brightness-0 dark:invert',
   } as const;
 
   // Google models
@@ -158,8 +155,7 @@ const getModelIcon = (modelId: string, modelName: string) => {
         <img
           src="https://cdn.brandfetch.io/idmJWF3N06/theme/light/symbol.svg?c=1dxbfHSJFAPEGdCLU4o5B"
           alt="Anthropic"
-          width={24}
-          height={24}
+          {...commonImgProps}
         />
       </div>
     );
@@ -234,7 +230,7 @@ const getModelIcon = (modelId: string, modelName: string) => {
   if (provider === 'groq' || name.includes('groq')) {
     return (
       <div className={ICON_CONTAINER_CLASSES}>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-foreground">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-black dark:text-white">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.5 6L12 10.5 8.5 8 12 5.5 15.5 8zM8.5 16L12 13.5 15.5 16 12 18.5 8.5 16z" />
         </svg>
       </div>
