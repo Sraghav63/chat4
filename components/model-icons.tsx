@@ -16,7 +16,10 @@ export const getModelIcon = (modelId: string, modelName: string) => {
   const commonImgProps = {
     width: 24,
     height: 24,
-    className: 'invert dark:invert-0',
+    style: {
+      filter: 'brightness(0) invert(1)'
+    } as React.CSSProperties,
+    className: 'dark:invert',
   } as const;
 
   // Google / Gemini
@@ -52,7 +55,8 @@ export const getModelIcon = (modelId: string, modelName: string) => {
         <img
           src="https://cdn.brandfetch.io/idmJWF3N06/theme/light/symbol.svg?c=1dxbfHSJFAPEGdCLU4o5B"
           alt="Anthropic"
-          {...commonImgProps}
+          width={24}
+          height={24}
         />
       </div>
     );
