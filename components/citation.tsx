@@ -20,7 +20,7 @@ export function Citation({ title, url, domain, publishedDate }: CitationProps) {
   return (
     <span className="relative inline-block">
       <button
-        className="inline-flex items-center justify-center w-4 h-4 hover:scale-110 transition-transform cursor-pointer border-0 mx-0.5 align-baseline rounded-sm overflow-hidden bg-background border border-border/50"
+        className="inline-flex items-center justify-center size-4 hover:scale-110 transition-transform cursor-pointer mx-0.5 align-baseline rounded-sm overflow-hidden bg-background border border-border/50"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onClick={handleClick}
@@ -30,7 +30,7 @@ export function Citation({ title, url, domain, publishedDate }: CitationProps) {
         <img 
           src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
           alt={domain}
-          className="w-full h-full object-cover"
+          className="size-full object-cover"
           onError={(e) => {
             // Fallback to domain initial
             e.currentTarget.style.display = 'none';
@@ -44,13 +44,13 @@ export function Citation({ title, url, domain, publishedDate }: CitationProps) {
       </button>
       
       {isHovered && (
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 z-50 pointer-events-none">
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-50 pointer-events-none">
           <div className="bg-gray-900 text-white rounded-lg shadow-xl p-3 max-w-xs pointer-events-auto">
             <div className="flex items-center gap-2 mb-2">
               <img 
                 src={`https://www.google.com/s2/favicons?domain=${domain}&sz=16`}
                 alt=""
-                className="w-4 h-4 shrink-0"
+                className="size-4 shrink-0"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}
