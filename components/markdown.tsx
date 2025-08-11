@@ -121,7 +121,7 @@ const remarkPlugins = [remarkGfm, remarkMath];
 
 const rehypePlugins = [rehypeKatex];
 
-// Function to process text and replace citations with Citation components
+// Function to process text and replace citations with Citation components  
 function processCitations(text: string, searchResults?: SearchResult[]): React.ReactNode[] {
   if (!searchResults || searchResults.length === 0) {
     return [text];
@@ -147,9 +147,13 @@ function processCitations(text: string, searchResults?: SearchResult[]): React.R
       
       // If no numbered match, try domain match
       if (!searchResult) {
-        searchResult = searchResults.find(result => 
-          result.domain.includes(citationText) || citationText.includes(result.domain)
-        );
+        const cleanCitationText = citationText.replace(/^www\./, '').toLowerCase();
+        searchResult = searchResults.find(result => {
+          const cleanResultDomain = result.domain.replace(/^www\./, '').toLowerCase();
+          return cleanResultDomain.includes(cleanCitationText) || 
+                 cleanCitationText.includes(cleanResultDomain) ||
+                 cleanResultDomain === cleanCitationText;
+        });
       }
       
       // If still no match, try title match (case insensitive, partial)
@@ -181,9 +185,13 @@ function processCitations(text: string, searchResults?: SearchResult[]): React.R
 function createTextRenderer(searchResults?: SearchResult[]) {
   // Named component returned so that ESLint "react/display-name" rule is satisfied
   const TextRenderer = ({ children }: { children: string }) => {
-    if (typeof children === 'string' && searchResults) {
+    if (typeof children === 'string' && searchResults && searchResults.length > 0) {
+      // Process each text node for citations
       const processedNodes = processCitations(children, searchResults);
-      return <>{processedNodes}</>;
+      if (processedNodes.length > 1 || processedNodes[0] !== children) {
+        // Only return processed nodes if there was actually a change
+        return <>{processedNodes}</>;
+      }
     }
     return <>{children}</>;
   };
@@ -220,7 +228,24 @@ const NonMemoizedMarkdown = ({
 
 export const Markdown = memo(
   NonMemoizedMarkdown,
-  (prevProps, nextProps) => 
-    prevProps.children === nextProps.children && 
-    prevProps.searchResults === nextProps.searchResults,
+  (prevProps, nextProps) => {
+    // Deep compare search results since they might be recreated each render
+    const prevResults = prevProps.searchResults;
+    const nextResults = nextProps.searchResults;
+    
+    if (prevProps.children !== nextProps.children) return false;
+    
+    if (!prevResults && !nextResults) return true;
+    if (!prevResults || !nextResults) return false;
+    if (prevResults.length !== nextResults.length) return false;
+    
+    // Compare each search result
+    return prevResults.every((prev, index) => {
+      const next = nextResults[index];
+      return prev.id === next.id && 
+             prev.url === next.url && 
+             prev.domain === next.domain &&
+             prev.title === next.title;
+    });
+  },
 );
