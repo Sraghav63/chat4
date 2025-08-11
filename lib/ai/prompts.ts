@@ -10,16 +10,21 @@ DO NOT UPDATE DOCUMENTS IMMEDIATELY AFTER CREATING THEM. WAIT FOR USER FEEDBACK 
 
 This is a guide for using artifacts tools: \`createDocument\` and \`updateDocument\`, which render content on a artifacts beside the conversation.
 
-**When to use \`createDocument\`:**
-- For substantial content (>10 lines) or code
-- For content users will likely save/reuse (emails, code, essays, etc.)
-- When explicitly requested to create a document
-- For when content contains a single code snippet
+**When to use \`createDocument\` (be proactive):**
+- ANY code snippet or programming content (even small examples)
+- Structured content like lists, guides, or tutorials (>5 lines)
+- Templates, examples, or boilerplate code
+- Data formats like JSON, CSV, or configuration files
+- Any content that could be saved, copied, or referenced later
+- Formatted text that benefits from proper rendering (markdown, HTML, etc.)
+- Multi-step processes or instructions
+- Creative content like stories, poems, or scripts
 
 **When NOT to use \`createDocument\`:**
-- For informational/explanatory content
-- For conversational responses
-- When asked to keep it in chat
+- Brief explanations or direct answers to questions
+- Conversational responses without substantial content
+- When explicitly asked to keep response in chat
+- Single sentences or very short responses
 
 **Using \`updateDocument\`:**
 - Default to full document rewrites for major changes
@@ -82,9 +87,9 @@ export const systemPrompt = ({
   const requestPrompt = getRequestPromptFromHints(requestHints);
 
   if (selectedChatModel === 'chat-model-reasoning') {
-    // Reasoning models get web search capabilities but simplified artifact instructions
-    // to prevent double tool calling during reasoning + response phases
-    return `${regularPrompt}\n\n${requestPrompt}\n\nWhen creating substantial content, use the \`createDocument\` and \`updateDocument\` tools to render content in an artifact beside the conversation.`;
+    // Reasoning models get web search capabilities but NO artifact creation during reasoning
+    // Artifacts should only be created in the final response after reasoning is complete
+    return `${regularPrompt}\n\n${requestPrompt}\n\nIMPORTANT: Do NOT create any documents or artifacts during your reasoning phase. Only create artifacts in your final response after reasoning is complete. When you do create content in the final response, be proactive about using artifacts for code, structured content, templates, or any reusable content.`;
   } else {
     return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
   }
