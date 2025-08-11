@@ -140,7 +140,6 @@ function processCitations(text: string, searchResults?: SearchResult[]): React.R
         return (
           <Citation
             key={`citation-${index}`}
-            number={searchResult.id}
             title={searchResult.title}
             url={searchResult.url}
             domain={searchResult.domain}

@@ -4,14 +4,13 @@ import { useState } from 'react';
 import { ExternalLinkIcon } from './icons';
 
 interface CitationProps {
-  number: number;
   title: string;
   url: string;
   domain: string;
   publishedDate?: string;
 }
 
-export function Citation({ number, title, url, domain, publishedDate }: CitationProps) {
+export function Citation({ title, url, domain, publishedDate }: CitationProps) {
   const [isHovered, setIsHovered] = useState(false);
 
   const handleClick = () => {
@@ -21,62 +20,74 @@ export function Citation({ number, title, url, domain, publishedDate }: Citation
   return (
     <span className="relative inline-block">
       <button
-        className="inline-flex items-center justify-center w-5 h-5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-sm transition-colors cursor-pointer border-0 mx-0.5 align-baseline"
+        className="inline-flex items-center justify-center w-4 h-4 hover:scale-110 transition-transform cursor-pointer border-0 mx-0.5 align-baseline rounded-sm overflow-hidden bg-background border border-border/50"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onClick={handleClick}
-        title={`Source ${number}: ${domain}`}
+        title={`Source: ${domain}`}
         type="button"
       >
-        {number}
+        <img 
+          src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
+          alt={domain}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            // Fallback to domain initial
+            e.currentTarget.style.display = 'none';
+            const parent = e.currentTarget.parentElement;
+            if (parent) {
+              parent.className = parent.className.replace('overflow-hidden', '');
+              parent.innerHTML = `<span class="text-xs font-medium text-muted-foreground">${domain.charAt(0).toUpperCase()}</span>`;
+            }
+          }}
+        />
       </button>
       
       {isHovered && (
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-50 pointer-events-none">
-          <div className="bg-background border border-border rounded-lg shadow-lg p-3 w-64 sm:w-72 max-w-[90vw] pointer-events-auto">
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <img 
-                  src={`https://www.google.com/s2/favicons?domain=${domain}&sz=16`}
-                  alt=""
-                  className="w-4 h-4 shrink-0"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-                <span className="text-xs text-muted-foreground truncate">
-                  {domain}
-                </span>
-                {publishedDate && (
-                  <>
-                    <span className="text-xs text-muted-foreground hidden sm:inline">•</span>
-                    <span className="text-xs text-muted-foreground hidden sm:inline truncate">
-                      {new Date(publishedDate).toLocaleDateString()}
-                    </span>
-                  </>
-                )}
-              </div>
-              <div className="shrink-0">
-                <ExternalLinkIcon size={12} />
-              </div>
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 z-50 pointer-events-none">
+          <div className="bg-gray-900 text-white rounded-lg shadow-xl p-3 max-w-xs pointer-events-auto">
+            <div className="flex items-center gap-2 mb-2">
+              <img 
+                src={`https://www.google.com/s2/favicons?domain=${domain}&sz=16`}
+                alt=""
+                className="w-4 h-4 shrink-0"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+              <span className="text-xs text-gray-300 truncate">
+                @{domain.replace('www.', '')}
+              </span>
+              {publishedDate && (
+                <>
+                  <span className="text-xs text-gray-500">•</span>
+                  <span className="text-xs text-gray-400">
+                    {(() => {
+                      const date = new Date(publishedDate);
+                      const now = new Date();
+                      const diffHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+                      
+                      if (diffHours < 24) return `${diffHours}h`;
+                      if (diffHours < 168) return `${Math.floor(diffHours / 24)}d`;
+                      return date.toLocaleDateString();
+                    })()}
+                  </span>
+                </>
+              )}
             </div>
             
-            <h4 className="text-sm font-medium text-foreground mb-1 overflow-hidden" style={{ 
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical'
-            }}>
+            <h4 className="text-sm font-medium text-white mb-2 overflow-hidden leading-tight" 
+                style={{ 
+                  display: '-webkit-box',
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: 'vertical'
+                }}>
               {title}
             </h4>
             
-            <p className="text-xs text-muted-foreground">
-              Click to open source
-            </p>
-          </div>
-          
-          {/* Arrow pointing down */}
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 pointer-events-none">
-            <div className="w-2 h-2 bg-background border-r border-b border-border transform rotate-45 -mt-1"></div>
+            <div className="text-xs text-gray-400 truncate">
+              {url.replace(/^https?:\/\//, '').split('/').slice(0, 2).join('/')}
+            </div>
           </div>
         </div>
       )}
