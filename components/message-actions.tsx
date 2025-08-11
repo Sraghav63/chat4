@@ -11,17 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from './ui/tooltip';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-} from './ui/dropdown-menu';
-import { memo, useState, startTransition } from 'react';
+import { memo, } from 'react';
 import { toast } from 'sonner';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { getModelIcon, prettyName } from './model-selector';

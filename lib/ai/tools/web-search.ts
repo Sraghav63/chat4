@@ -29,8 +29,52 @@ export const webSearch = tool({
     if (!EXA_API_KEY) {
       return {
         error: 'Missing EXA_API_KEY environment variable. Please set it in your .env file.',
+        message: 'Web search is not configured properly.',
+        query: query,
       };
     }
+
+    // Validate and sanitize query
+    if (!query || typeof query !== 'string' || query.trim().length === 0) {
+      return {
+        error: 'Invalid search query',
+        message: 'Search query cannot be empty.',
+        query: query || '',
+      };
+    }
+
+    const sanitizedQuery = query.trim().substring(0, 500); // Limit query length
+
+    // Add deduplication for rapid repeated searches (mainly for reasoning models)
+    const cacheKey = `search:${sanitizedQuery.toLowerCase()}:${numResults || 5}`;
+    const now = Date.now();
+    
+    if (!(globalThis as any).searchCache) {
+      (globalThis as any).searchCache = new Map<string, number>();
+      // Clean up old cache entries every 10 minutes
+      setInterval(() => {
+        const tenMinutesAgo = Date.now() - 600000;
+        const cache = (globalThis as any).searchCache as Map<string, number>;
+        for (const [key, timestamp] of cache.entries()) {
+          if (timestamp < tenMinutesAgo) {
+            cache.delete(key);
+          }
+        }
+      }, 600000);
+    }
+    
+    const cache = (globalThis as any).searchCache as Map<string, number>;
+    const lastSearch = cache.get(cacheKey);
+    if (lastSearch && (now - lastSearch) < 2000) { // 2 second deduplication
+      console.log(`[WebSearch] Preventing duplicate search for: "${sanitizedQuery}"`);
+      return {
+        error: 'Duplicate search prevented',
+        message: 'This search was recently performed. The system prevents rapid duplicate searches.',
+        query: sanitizedQuery,
+      };
+    }
+    
+    cache.set(cacheKey, now);
 
     try {
       const exa = new Exa(EXA_API_KEY);
@@ -62,34 +106,69 @@ export const webSearch = tool({
         searchOptions.endCrawlDate = endCrawlDate;
       }
 
-      const results = await exa.searchAndContents(query, searchOptions);
+      const results = await exa.searchAndContents(sanitizedQuery, searchOptions);
 
       const processedResults = {
-        query: query,
-        results: results.results.map((result: any, index: number) => ({
-          id: index + 1,
-          title: result.title,
-          url: result.url,
-          publishedDate: result.publishedDate,
-          author: result.author,
-          score: result.score,
-          text: result.text,
-          highlights: result.highlights,
-          summary: result.summary,
-          domain: new URL(result.url).hostname,
-        })),
+        query: sanitizedQuery,
+        results: results.results?.map((result: any, index: number) => {
+          try {
+            return {
+              id: index + 1,
+              title: result.title || 'Untitled',
+              url: result.url,
+              publishedDate: result.publishedDate,
+              author: result.author,
+              score: result.score,
+              text: result.text,
+              highlights: result.highlights,
+              summary: result.summary,
+              domain: result.url ? new URL(result.url).hostname : 'unknown',
+            };
+          } catch (urlError) {
+            console.warn('Invalid URL in search result:', result.url);
+            return {
+              id: index + 1,
+              title: result.title || 'Untitled',
+              url: result.url || '#',
+              publishedDate: result.publishedDate,
+              author: result.author,
+              score: result.score,
+              text: result.text,
+              highlights: result.highlights,
+              summary: result.summary,
+              domain: 'invalid-url',
+            };
+          }
+        }) || [],
         autopromptString: results.autopromptString,
         searchType: type,
         timestamp: new Date().toISOString(),
-        totalResults: results.results.length,
+        totalResults: results.results?.length || 0,
       };
 
       return processedResults;
     } catch (err) {
       console.error('Exa API error:', err);
+      
+      // Handle specific error types
+      let errorMessage = 'Unknown error';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+        // Handle common API errors
+        if (err.message.includes('rate limit')) {
+          errorMessage = 'Rate limit exceeded. Please try again in a few minutes.';
+        } else if (err.message.includes('invalid key') || err.message.includes('unauthorized')) {
+          errorMessage = 'API key is invalid or unauthorized. Please check your Exa API configuration.';
+        } else if (err.message.includes('timeout')) {
+          errorMessage = 'Search request timed out. Please try again.';
+        } else if (err.message.includes('network')) {
+          errorMessage = 'Network error occurred. Please check your connection.';
+        }
+      }
+      
       return {
         error: 'Failed to search the web using Exa',
-        message: err instanceof Error ? err.message : 'Unknown error',
+        message: errorMessage,
         query: query,
       };
     }

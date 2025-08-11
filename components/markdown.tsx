@@ -121,26 +121,54 @@ const remarkPlugins = [remarkGfm, remarkMath];
 
 const rehypePlugins = [rehypeKatex];
 
-// Function to process text and replace citations with Citation components
+// Function to process text and replace citations with Citation components  
 function processCitations(text: string, searchResults?: SearchResult[]): React.ReactNode[] {
   if (!searchResults || searchResults.length === 0) {
     return [text];
   }
 
-  // Split by citation pattern [1], [2], etc.
-  const parts = text.split(/(\[\d+\])/g);
+  // Split by multiple citation patterns:
+  // [1], [2] - numbered citations
+  // [domain] - domain-based citations like [example.com]
+  // [title] - title-based citations (partial match)
+  const parts = text.split(/(\[[^\]]+\])/g);
   
   return parts.map((part, index) => {
-    const citationMatch = part.match(/^\[(\d+)\]$/);
+    const citationMatch = part.match(/^\[([^\]]+)\]$/);
     if (citationMatch) {
-      const citationNumber = parseInt(citationMatch[1], 10);
-      const searchResult = searchResults.find(result => result.id === citationNumber);
+      const citationText = citationMatch[1];
+      let searchResult: SearchResult | undefined;
+
+      // First try numbered citation
+      const citationNumber = Number.parseInt(citationText, 10);
+      if (!Number.isNaN(citationNumber)) {
+        searchResult = searchResults.find(result => result.id === citationNumber);
+      }
+      
+      // If no numbered match, try domain match
+      if (!searchResult) {
+        const cleanCitationText = citationText.replace(/^www\./, '').toLowerCase();
+        searchResult = searchResults.find(result => {
+          const cleanResultDomain = result.domain.replace(/^www\./, '').toLowerCase();
+          return cleanResultDomain.includes(cleanCitationText) || 
+                 cleanCitationText.includes(cleanResultDomain) ||
+                 cleanResultDomain === cleanCitationText;
+        });
+      }
+      
+      // If still no match, try title match (case insensitive, partial)
+      if (!searchResult) {
+        const lowerCitationText = citationText.toLowerCase();
+        searchResult = searchResults.find(result => 
+          result.title.toLowerCase().includes(lowerCitationText) || 
+          lowerCitationText.includes(result.title.toLowerCase().substring(0, 20))
+        );
+      }
       
       if (searchResult) {
         return (
           <Citation
             key={`citation-${index}`}
-            number={searchResult.id}
             title={searchResult.title}
             url={searchResult.url}
             domain={searchResult.domain}
@@ -157,9 +185,13 @@ function processCitations(text: string, searchResults?: SearchResult[]): React.R
 function createTextRenderer(searchResults?: SearchResult[]) {
   // Named component returned so that ESLint "react/display-name" rule is satisfied
   const TextRenderer = ({ children }: { children: string }) => {
-    if (typeof children === 'string' && searchResults) {
+    if (typeof children === 'string' && searchResults && searchResults.length > 0) {
+      // Process each text node for citations
       const processedNodes = processCitations(children, searchResults);
-      return <>{processedNodes}</>;
+      if (processedNodes.length > 1 || processedNodes[0] !== children) {
+        // Only return processed nodes if there was actually a change
+        return <>{processedNodes}</>;
+      }
     }
     return <>{children}</>;
   };
@@ -196,7 +228,24 @@ const NonMemoizedMarkdown = ({
 
 export const Markdown = memo(
   NonMemoizedMarkdown,
-  (prevProps, nextProps) => 
-    prevProps.children === nextProps.children && 
-    prevProps.searchResults === nextProps.searchResults,
+  (prevProps, nextProps) => {
+    // Deep compare search results since they might be recreated each render
+    const prevResults = prevProps.searchResults;
+    const nextResults = nextProps.searchResults;
+    
+    if (prevProps.children !== nextProps.children) return false;
+    
+    if (!prevResults && !nextResults) return true;
+    if (!prevResults || !nextResults) return false;
+    if (prevResults.length !== nextResults.length) return false;
+    
+    // Compare each search result
+    return prevResults.every((prev, index) => {
+      const next = nextResults[index];
+      return prev.id === next.id && 
+             prev.url === next.url && 
+             prev.domain === next.domain &&
+             prev.title === next.title;
+    });
+  },
 );

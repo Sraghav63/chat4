@@ -92,12 +92,12 @@ export const getStocks = tool({
         .map(([date, data]) => ({
           date: date,
           timestamp: new Date(date).getTime(),
-          open: parseFloat((data as any)['1. open']),
-          high: parseFloat((data as any)['2. high']),
-          low: parseFloat((data as any)['3. low']),
-          close: parseFloat((data as any)['4. close']),
-          volume: parseInt((data as any)['5. volume']),
-          price: parseFloat((data as any)['4. close']),
+          open: Number.parseFloat((data as any)['1. open']),
+          high: Number.parseFloat((data as any)['2. high']),
+          low: Number.parseFloat((data as any)['3. low']),
+          close: Number.parseFloat((data as any)['4. close']),
+          volume: Number.parseInt((data as any)['5. volume']),
+          price: Number.parseFloat((data as any)['4. close']),
         }))
         .filter(d => new Date(d.date) >= startDate)
         .sort((a, b) => a.timestamp - b.timestamp);
@@ -114,18 +114,18 @@ export const getStocks = tool({
         return `$${marketCap.toFixed(0)}`;
       };
       
-      const priceChange = parseFloat(globalQuote['09. change']);
+      const priceChange = Number.parseFloat(globalQuote['09. change']);
       const priceChangeString = globalQuote['10. change percent'];
-      const priceChangePercent = parseFloat(priceChangeString.replace('%', ''));
+      const priceChangePercent = Number.parseFloat(priceChangeString.replace('%', ''));
 
       const processed = {
         symbol: overviewData.Symbol,
         name: overviewData.Name,
-        current_price: parseFloat(globalQuote['05. price']),
+        current_price: Number.parseFloat(globalQuote['05. price']),
         price_change: priceChange,
         price_change_percent: priceChangePercent,
         currency: overviewData.Currency,
-        market_cap: overviewData.MarketCapitalization !== 'None' ? formatMarketCap(parseFloat(overviewData.MarketCapitalization)) : 'N/A',
+        market_cap: overviewData.MarketCapitalization !== 'None' ? formatMarketCap(Number.parseFloat(overviewData.MarketCapitalization)) : 'N/A',
         description: overviewData.Description,
         primary_exchange: overviewData.Exchange,
         market_status: getMarketStatus(new Date(globalQuote['07. latest trading day'])),
@@ -146,7 +146,7 @@ export const getStocks = tool({
 
     } catch (err) {
       console.error('Alpha Vantage API error:', err);
-      let errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       return {
         error: 'Failed to fetch stock data from Alpha Vantage',
         message: errorMessage,

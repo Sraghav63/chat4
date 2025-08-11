@@ -70,20 +70,7 @@ function PureMessages({
     messages.length > 0 &&
     messages[messages.length - 1].role === 'user' && <ThinkingMessage />}
 
-  {status === 'streaming' && messages.length > 0 && (() => {
-    const lastMessage = messages[messages.length - 1];
-    const isSearching = lastMessage.role === 'assistant' && 
-      lastMessage.parts?.some(part => 
-        part.type === 'tool-invocation' && 
-        part.toolInvocation.toolName === 'webSearch' && 
-        part.toolInvocation.state === 'call'
-      );
-    
-    if (isSearching) {
-      return <ThinkingMessage isSearching={true} />;
-    }
-    return null;
-  })()}
+  {/* Search indication is now handled within the message component itself */}
 
       <motion.div
         ref={messagesEndRef}

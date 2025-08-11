@@ -251,10 +251,10 @@ const getPricingTier = (model: OpenRouterModel) => {
   
   // OpenRouter returns pricing per token, convert to per 1M tokens for calculation
   const promptPricePerToken = typeof model.pricing.prompt === 'string' 
-    ? parseFloat(model.pricing.prompt) || 0
+    ? Number.parseFloat(model.pricing.prompt) || 0
     : (model.pricing.prompt as number) || 0;
   const completionPricePerToken = typeof model.pricing.completion === 'string'
-    ? parseFloat(model.pricing.completion) || 0
+    ? Number.parseFloat(model.pricing.completion) || 0
     : (model.pricing.completion as number) || 0;
   
   const avgPricePer1M = ((promptPricePerToken + completionPricePerToken) / 2) * 1000000;
@@ -271,10 +271,10 @@ const formatPricing = (model: OpenRouterModel) => {
   
   // OpenRouter returns pricing per token, we need to convert to per 1M tokens
   const promptPricePerToken = typeof model.pricing.prompt === 'string' 
-    ? parseFloat(model.pricing.prompt)
+    ? Number.parseFloat(model.pricing.prompt)
     : model.pricing.prompt;
   const completionPricePerToken = typeof model.pricing.completion === 'string'
-    ? parseFloat(model.pricing.completion)
+    ? Number.parseFloat(model.pricing.completion)
     : model.pricing.completion;
   
   if (promptPricePerToken === 0 && completionPricePerToken === 0) {

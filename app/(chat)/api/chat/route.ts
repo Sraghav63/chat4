@@ -203,7 +203,7 @@ export async function POST(request: Request) {
           messages: processedMessages,
           maxSteps: 5,
           // Only include function calling tools if the selected model is known to support them.
-          ...(function () {
+          ...(() => {
             const lowerId = selectedChatModel.toLowerCase();
             const supportsTools =
               // Most OpenAI, Anthropic, and Google models support tool calling.
@@ -215,26 +215,26 @@ export async function POST(request: Request) {
               (!lowerId.endsWith(':free') &&
                 (lowerId.includes('gpt') || lowerId.includes('claude')));
 
-            return supportsTools
-              ? {
-                  experimental_activeTools: [
-                    'webSearch',
-                    'getWeather',
-                    'getStocks',
-                    'createDocument',
-                    'updateDocument',
-                    'requestSuggestions',
-                  ],
-                  tools: {
-                    webSearch,
-                    getWeather,
-                    getStocks,
-                    createDocument: createDocument({ session, dataStream }),
-                    updateDocument: updateDocument({ session, dataStream }),
-                    requestSuggestions: requestSuggestions({ session, dataStream }),
-                  },
-                }
-              : {};
+            if (!supportsTools) return {};
+
+            return {
+              experimental_activeTools: [
+                'webSearch',
+                'getWeather', 
+                'getStocks',
+                'createDocument',
+                'updateDocument',
+                'requestSuggestions',
+              ],
+              tools: {
+                webSearch,
+                getWeather,
+                getStocks,
+                createDocument: createDocument({ session, dataStream }),
+                updateDocument: updateDocument({ session, dataStream }),
+                requestSuggestions: requestSuggestions({ session, dataStream }),
+              },
+            };
           })(),
           experimental_transform: smoothStream({ chunking: 'word' }),
           experimental_generateMessageId: generateUUID,

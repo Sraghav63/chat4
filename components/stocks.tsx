@@ -1,8 +1,6 @@
 'use client';
-
-import cx from 'classnames';
 import { format } from 'date-fns';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Line } from 'react-chartjs-2';
 import {
@@ -479,7 +477,7 @@ export function Stocks({
           <div className="h-64 w-full bg-black/20 backdrop-blur-sm rounded-xl border border-white/10 p-4">
             {isLoading ? (
               <div className="flex items-center justify-center h-full">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white/60"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white/60" />
               </div>
             ) : (
               <Line data={chartConfig} options={chartOptions} />

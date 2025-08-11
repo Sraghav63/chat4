@@ -100,13 +100,30 @@ const PurePreviewMessage = ({
             },
           )}
         >
-          {message.role === 'assistant' && (
-            <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background">
-              <div className="translate-y-px">
-                <SparklesIcon size={14} />
+          {message.role === 'assistant' && (() => {
+            // Check if this message has an active webSearch tool call
+            const hasActiveWebSearch = message.parts?.some(part => 
+              part.type === 'tool-invocation' && 
+              part.toolInvocation.toolName === 'webSearch' && 
+              part.toolInvocation.state === 'call'
+            );
+
+            return (
+              <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background">
+                <div className="translate-y-px">
+                  {hasActiveWebSearch ? (
+                    <div className="flex items-center gap-1">
+                      <div className="w-1 h-1 bg-current rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
+                      <div className="w-1 h-1 bg-current rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
+                      <div className="w-1 h-1 bg-current rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
+                    </div>
+                  ) : (
+                    <SparklesIcon size={14} />
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           <div
             className={cn('flex flex-col gap-4 w-full', {
@@ -209,7 +226,7 @@ const PurePreviewMessage = ({
                       })}
                     >
                       {toolName === 'webSearch' ? (
-                        <WebSearchResults isLoading={true} />
+                        null
                       ) : toolName === 'getWeather' ? (
                         <Weather />
                       ) : toolName === 'getStocks' ? (
