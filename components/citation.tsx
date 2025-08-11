@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { ExternalLinkIcon } from './icons';
 
 interface CitationProps {
   title: string;
@@ -32,9 +31,21 @@ export function Citation({ title, url, domain, publishedDate }: CitationProps) {
           alt={domain}
           className="size-full object-cover"
           onError={(e) => {
-            // Fallback to domain initial
-            e.currentTarget.style.display = 'none';
-            const parent = e.currentTarget.parentElement;
+            // Try alternative favicon services before falling back to letter
+            const img = e.currentTarget;
+            if (!img.dataset.retried) {
+              img.dataset.retried = 'true';
+              img.src = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+              return;
+            }
+            if (img.dataset.retried === 'true') {
+              img.dataset.retried = 'second';
+              img.src = `https://favicon.yandex.net/favicon/${domain}`;
+              return;
+            }
+            // Final fallback to domain initial
+            img.style.display = 'none';
+            const parent = img.parentElement;
             if (parent) {
               parent.className = parent.className.replace('overflow-hidden', '');
               parent.innerHTML = `<span class="text-xs font-medium text-muted-foreground">${domain.charAt(0).toUpperCase()}</span>`;
@@ -52,7 +63,18 @@ export function Citation({ title, url, domain, publishedDate }: CitationProps) {
                 alt=""
                 className="size-4 shrink-0"
                 onError={(e) => {
-                  e.currentTarget.style.display = 'none';
+                  const img = e.currentTarget;
+                  if (!img.dataset.retried) {
+                    img.dataset.retried = 'true';
+                    img.src = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+                    return;
+                  }
+                  if (img.dataset.retried === 'true') {
+                    img.dataset.retried = 'second';
+                    img.src = `https://favicon.yandex.net/favicon/${domain}`;
+                    return;
+                  }
+                  img.style.display = 'none';
                 }}
               />
               <span className="text-xs text-gray-300 truncate">

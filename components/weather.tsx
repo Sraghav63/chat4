@@ -613,9 +613,7 @@ export function Weather({
           font: {
             size: 11,
           },
-          callback: function(value: any) {
-            return `${value}${unitSymbol}`;
-          },
+          callback: (value: any) => `${value}${unitSymbol}`,
         },
       },
     },

@@ -20,7 +20,6 @@ import { useSearchParams } from 'next/navigation';
 import { useChatVisibility } from '@/hooks/use-chat-visibility';
 import { useAutoResume } from '@/hooks/use-auto-resume';
 import { ChatSDKError } from '@/lib/errors';
-import { saveChatModelAsCookie } from '@/app/(chat)/actions';
 
 export function Chat({
   id,

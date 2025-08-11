@@ -127,14 +127,39 @@ function processCitations(text: string, searchResults?: SearchResult[]): React.R
     return [text];
   }
 
-  // Split by citation pattern [1], [2], etc.
-  const parts = text.split(/(\[\d+\])/g);
+  // Split by multiple citation patterns:
+  // [1], [2] - numbered citations
+  // [domain] - domain-based citations like [example.com]
+  // [title] - title-based citations (partial match)
+  const parts = text.split(/(\[[^\]]+\])/g);
   
   return parts.map((part, index) => {
-    const citationMatch = part.match(/^\[(\d+)\]$/);
+    const citationMatch = part.match(/^\[([^\]]+)\]$/);
     if (citationMatch) {
-      const citationNumber = parseInt(citationMatch[1], 10);
-      const searchResult = searchResults.find(result => result.id === citationNumber);
+      const citationText = citationMatch[1];
+      let searchResult: SearchResult | undefined;
+
+      // First try numbered citation
+      const citationNumber = Number.parseInt(citationText, 10);
+      if (!Number.isNaN(citationNumber)) {
+        searchResult = searchResults.find(result => result.id === citationNumber);
+      }
+      
+      // If no numbered match, try domain match
+      if (!searchResult) {
+        searchResult = searchResults.find(result => 
+          result.domain.includes(citationText) || citationText.includes(result.domain)
+        );
+      }
+      
+      // If still no match, try title match (case insensitive, partial)
+      if (!searchResult) {
+        const lowerCitationText = citationText.toLowerCase();
+        searchResult = searchResults.find(result => 
+          result.title.toLowerCase().includes(lowerCitationText) || 
+          lowerCitationText.includes(result.title.toLowerCase().substring(0, 20))
+        );
+      }
       
       if (searchResult) {
         return (

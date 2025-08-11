@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'edge';
 
@@ -13,7 +13,7 @@ export async function GET(_request: NextRequest) {
 
   const headers: Record<string, string> = {};
   if (apiKey) {
-    headers['Authorization'] = `Bearer ${apiKey}`;
+    headers.Authorization = `Bearer ${apiKey}`;
   }
 
   try {

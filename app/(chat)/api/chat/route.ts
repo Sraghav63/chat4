@@ -4,7 +4,6 @@ import {
   createDataStream,
   smoothStream,
   streamText,
-  tool,
 } from 'ai';
 import { auth, type UserType } from '@/app/(auth)/auth';
 import { type RequestHints, systemPrompt } from '@/lib/ai/prompts';
@@ -204,7 +203,7 @@ export async function POST(request: Request) {
           messages: processedMessages,
           maxSteps: 5,
           // Only include function calling tools if the selected model is known to support them.
-          ...(function () {
+          ...(() => {
             const lowerId = selectedChatModel.toLowerCase();
             const supportsTools =
               // Most OpenAI, Anthropic, and Google models support tool calling.

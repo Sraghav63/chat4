@@ -1,7 +1,6 @@
 'use client';
 
 import { ExternalLinkIcon } from './icons';
-import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
 interface WebSearchResult {
@@ -48,6 +47,7 @@ function MobileSearchSources({ results }: { results: WebSearchResult[] }) {
     <div className="block sm:hidden">
       {!isExpanded ? (
         <button 
+          type="button"
           onClick={() => setIsExpanded(true)}
           className="flex items-center gap-2 p-3 border rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors w-full"
         >
@@ -93,6 +93,7 @@ function MobileSearchSources({ results }: { results: WebSearchResult[] }) {
           <div className="flex items-center justify-between">
             <div className="text-sm font-medium">Search Results</div>
             <button 
+              type="button"
               onClick={() => setIsExpanded(false)}
               className="text-xs text-muted-foreground hover:text-foreground"
             >
@@ -180,16 +181,16 @@ export function WebSearchResults({ searchData, isLoading = false }: WebSearchRes
         <div className="block sm:hidden">
           <div className="flex flex-col gap-3">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="w-full p-3 border rounded-lg animate-pulse">
+              <div key={`mobile-skeleton-${i}`} className="w-full p-3 border rounded-lg animate-pulse">
                 <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-muted rounded-full"></div>
+                  <div className="w-6 h-6 bg-muted rounded-full" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="w-4 h-4 bg-muted rounded"></div>
-                      <div className="h-3 bg-muted rounded w-20"></div>
+                      <div className="w-4 h-4 bg-muted rounded" />
+                      <div className="h-3 bg-muted rounded w-20" />
                     </div>
-                    <div className="h-4 bg-muted rounded w-full mb-2"></div>
-                    <div className="h-3 bg-muted rounded w-3/4"></div>
+                    <div className="h-4 bg-muted rounded w-full mb-2" />
+                    <div className="h-3 bg-muted rounded w-3/4" />
                   </div>
                 </div>
               </div>
@@ -201,16 +202,16 @@ export function WebSearchResults({ searchData, isLoading = false }: WebSearchRes
         <div className="hidden sm:block">
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="flex-shrink-0 w-64 md:w-72 lg:w-80 p-3 border rounded-lg animate-pulse">
+              <div key={`desktop-skeleton-${i}`} className="shrink-0 w-64 md:w-72 lg:w-80 p-3 border rounded-lg animate-pulse">
                 <div className="flex items-start gap-3 h-full">
-                  <div className="w-6 h-6 bg-muted rounded-full"></div>
+                  <div className="w-6 h-6 bg-muted rounded-full" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="w-4 h-4 bg-muted rounded"></div>
-                      <div className="h-3 bg-muted rounded w-20"></div>
+                      <div className="w-4 h-4 bg-muted rounded" />
+                      <div className="h-3 bg-muted rounded w-20" />
                     </div>
-                    <div className="h-4 bg-muted rounded w-full mb-2"></div>
-                    <div className="h-3 bg-muted rounded w-3/4"></div>
+                    <div className="h-4 bg-muted rounded w-full mb-2" />
+                    <div className="h-3 bg-muted rounded w-3/4" />
                   </div>
                 </div>
               </div>
