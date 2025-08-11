@@ -4,6 +4,7 @@ import {
   createDataStream,
   smoothStream,
   streamText,
+  tool,
 } from 'ai';
 import { auth, type UserType } from '@/app/(auth)/auth';
 import { type RequestHints, systemPrompt } from '@/lib/ai/prompts';
@@ -215,26 +216,26 @@ export async function POST(request: Request) {
               (!lowerId.endsWith(':free') &&
                 (lowerId.includes('gpt') || lowerId.includes('claude')));
 
-            return supportsTools
-              ? {
-                  experimental_activeTools: [
-                    'webSearch',
-                    'getWeather',
-                    'getStocks',
-                    'createDocument',
-                    'updateDocument',
-                    'requestSuggestions',
-                  ],
-                  tools: {
-                    webSearch,
-                    getWeather,
-                    getStocks,
-                    createDocument: createDocument({ session, dataStream }),
-                    updateDocument: updateDocument({ session, dataStream }),
-                    requestSuggestions: requestSuggestions({ session, dataStream }),
-                  },
-                }
-              : {};
+            if (!supportsTools) return {};
+
+            return {
+              experimental_activeTools: [
+                'webSearch',
+                'getWeather', 
+                'getStocks',
+                'createDocument',
+                'updateDocument',
+                'requestSuggestions',
+              ],
+              tools: {
+                webSearch,
+                getWeather,
+                getStocks,
+                createDocument: createDocument({ session, dataStream }),
+                updateDocument: updateDocument({ session, dataStream }),
+                requestSuggestions: requestSuggestions({ session, dataStream }),
+              },
+            };
           })(),
           experimental_transform: smoothStream({ chunking: 'word' }),
           experimental_generateMessageId: generateUUID,

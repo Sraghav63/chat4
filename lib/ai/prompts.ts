@@ -81,8 +81,13 @@ export const systemPrompt = ({
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
 
-  // All models should get the same prompt for consistent behavior, including web search
-  return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+  if (selectedChatModel === 'chat-model-reasoning') {
+    // Reasoning models get web search capabilities but simplified artifact instructions
+    // to prevent double tool calling during reasoning + response phases
+    return `${regularPrompt}\n\n${requestPrompt}\n\nWhen creating substantial content, use the \`createDocument\` and \`updateDocument\` tools to render content in an artifact beside the conversation.`;
+  } else {
+    return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+  }
 };
 
 export const codePrompt = `

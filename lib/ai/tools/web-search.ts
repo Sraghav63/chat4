@@ -45,6 +45,37 @@ export const webSearch = tool({
 
     const sanitizedQuery = query.trim().substring(0, 500); // Limit query length
 
+    // Add deduplication for rapid repeated searches (mainly for reasoning models)
+    const cacheKey = `search:${sanitizedQuery.toLowerCase()}:${numResults || 5}`;
+    const now = Date.now();
+    
+    if (!(globalThis as any).searchCache) {
+      (globalThis as any).searchCache = new Map<string, number>();
+      // Clean up old cache entries every 10 minutes
+      setInterval(() => {
+        const tenMinutesAgo = Date.now() - 600000;
+        const cache = (globalThis as any).searchCache as Map<string, number>;
+        for (const [key, timestamp] of cache.entries()) {
+          if (timestamp < tenMinutesAgo) {
+            cache.delete(key);
+          }
+        }
+      }, 600000);
+    }
+    
+    const cache = (globalThis as any).searchCache as Map<string, number>;
+    const lastSearch = cache.get(cacheKey);
+    if (lastSearch && (now - lastSearch) < 2000) { // 2 second deduplication
+      console.log(`[WebSearch] Preventing duplicate search for: "${sanitizedQuery}"`);
+      return {
+        error: 'Duplicate search prevented',
+        message: 'This search was recently performed. The system prevents rapid duplicate searches.',
+        query: sanitizedQuery,
+      };
+    }
+    
+    cache.set(cacheKey, now);
+
     try {
       const exa = new Exa(EXA_API_KEY);
       

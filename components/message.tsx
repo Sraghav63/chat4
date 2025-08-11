@@ -209,7 +209,7 @@ const PurePreviewMessage = ({
                       })}
                     >
                       {toolName === 'webSearch' ? (
-                        <WebSearchResults isLoading={true} />
+                        null
                       ) : toolName === 'getWeather' ? (
                         <Weather />
                       ) : toolName === 'getStocks' ? (
