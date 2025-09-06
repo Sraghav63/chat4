@@ -11,6 +11,7 @@
       "Bash(npm cache clean:*)",
       "WebFetch(domain:openrouter.ai)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits"
   }
 }
