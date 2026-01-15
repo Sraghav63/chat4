@@ -2,8 +2,10 @@
 # This file configures the build environment for deploying to platforms like Coolify
 
 [phases.setup]
-# Include Python for native module compilation (required by bufferutil, node-gyp)
-nixPkgs = ["python3", "gcc", "gnumake"]
+# Include Node.js, Python, and build tools for native module compilation
+# nodejs_22 provides npm and node runtime
+# python3, gcc, gnumake are required by bufferutil and other native modules
+nixPkgs = ["nodejs_22", "python3", "gcc", "gnumake"]
 
 [phases.install]
 # Use pnpm with frozen lockfile for reproducible builds
