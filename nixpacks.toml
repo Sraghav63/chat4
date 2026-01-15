@@ -1,0 +1,16 @@
+# Nixpacks configuration for Coolify deployment
+# This file configures the build environment for deploying to platforms like Coolify
+
+[phases.setup]
+# Include Python for native module compilation (required by bufferutil, node-gyp)
+nixPkgs = ["python3", "gcc", "gnumake"]
+
+[phases.install]
+# Use pnpm with frozen lockfile for reproducible builds
+cmds = ["npm install -g corepack@0.24.1", "corepack enable", "pnpm install --frozen-lockfile"]
+
+[phases.build]
+cmds = ["pnpm run build"]
+
+[start]
+cmd = "pnpm run start"

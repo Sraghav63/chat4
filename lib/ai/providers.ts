@@ -24,7 +24,7 @@ export const myProvider = isTestEnvironment
   : (() => {
       const base = customProvider({
         languageModels: {
-          'chat-model': openrouter('openai/gpt-4o'),
+          'chat-model': openrouter('openai/gpt-4.1'),
           'chat-model-reasoning': wrapLanguageModel({
             model: openrouter('anthropic/claude-3-5-sonnet'),
             middleware: extractReasoningMiddleware({ tagName: 'think' }),

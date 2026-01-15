@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Session } from 'next-auth';
@@ -15,9 +16,10 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-const SEARCH_BG = 'rgb(22, 28, 36)';
-const WIDGET_BG = 'rgb(22, 28, 36)';
-const APP_TILE_BG = 'rgb(30, 37, 46)';
+// Tailwind arbitrary color values must not contain spaces
+const SEARCH_BG = 'rgb(22,28,36)';
+const WIDGET_BG = 'rgb(22,28,36)';
+const APP_TILE_BG = 'rgb(30,37,46)';
 
 interface NewTabDashboardProps {
   session: Session;
@@ -191,44 +193,46 @@ function StockWidget() {
 
 function WeatherWidget() {
   return (
-    <div className="relative w-full h-full bg-blue-600 rounded-3xl p-6 overflow-hidden">
-      {/* Weather icon background */}
-      <div className="absolute top-4 right-4 opacity-20">
-        <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-          <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M6.5 20Q4.22 20 2.61 18.43Q1 16.85 1 14.58Q1 12.63 2.17 11.1Q3.35 9.57 5.25 9.15Q5.88 6.85 7.75 5.43Q9.63 4 12 4Q14.93 4 16.96 6.04Q19 8.07 19 11Q20.73 11.2 21.86 12.5Q23 13.78 23 15.5Q23 17.38 21.69 18.69Q20.38 20 18.5 20H6.5M6.5 18H18.5Q19.55 18 20.27 17.27Q21 16.55 21 15.5Q21 14.45 20.27 13.73Q19.55 13 18.5 13H17V11Q17 8.93 15.54 7.46Q14.07 6 12 6Q9.93 6 8.46 7.46Q7 8.93 7 11H6.5Q5.05 11 4.03 12.03Q3 13.05 3 14.5Q3 15.95 4.03 16.97Q5.05 18 6.5 18Z"/>
-          </svg>
+    <div className="relative w-full h-full rounded-3xl p-6 overflow-hidden bg-gradient-to-b from-emerald-200 to-amber-200">
+      {/* Sun icon */}
+      <div className="absolute top-4 right-4 text-white/90">
+        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41" />
+        </svg>
+      </div>
+
+      <div className="relative z-10 flex h-full flex-col justify-between">
+        <div />
+        <div>
+          <div className="text-slate-900 text-3xl font-light">79° F</div>
+          <div className="text-slate-900/80 text-sm">Sunny</div>
         </div>
-      </div>
-
-      <div className="relative z-10">
-        <div className="text-white text-3xl font-light mb-1">72°F</div>
-        <div className="text-white/90 text-sm">Mostly clear</div>
-        <div className="text-white/70 text-xs">Cascades, VA</div>
-      </div>
-
-      {/* Subtle pattern overlay */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="w-full h-full bg-gradient-to-tr from-white/10 via-transparent to-white/5"></div>
+        <div className="text-slate-900/70 text-xs">Boulder, CO</div>
       </div>
     </div>
   );
 }
 
 function NotesWidget({ variant = 'orange' }: { variant?: 'orange' | 'blue' }) {
-  const styles =
-    variant === 'blue'
-      ? 'bg-blue-800'
-      : 'bg-orange-500';
-  return (
-    <div className={cn("relative w-full h-full rounded-3xl p-6", styles)}>
-      <div className="text-white/90 text-sm font-medium mb-2">New note...</div>
-      <div className="h-full flex items-center justify-center">
-        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-          </svg>
+  if (variant === 'blue') {
+    return (
+      <div className="relative w-full h-full rounded-3xl p-6 bg-[#0c1b53]">
+        <div className="flex flex-col gap-2 text-white">
+          <div className="opacity-80">ceqwcewq</div>
+          <div className="opacity-80">ewcq</div>
+          <div className="opacity-80">cewq</div>
         </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-full rounded-3xl p-6 bg-[#8a4b10]">
+      <div className="flex flex-col gap-2 text-white text-sm">
+        <div className="opacity-90">eqwwcq</div>
+        <div className="opacity-90">ewcq</div>
+        <div className="opacity-90">cqew</div>
       </div>
     </div>
   );
@@ -280,18 +284,36 @@ function QuickDinnerWidget() {
   );
 }
 
+function ImageTile({ image, alt }: { image: string; alt: string }) {
+  return (
+    <div className="relative w-full h-full rounded-3xl overflow-hidden">
+      <img src={image} alt={alt} className="absolute inset-0 w-full h-full object-cover" />
+    </div>
+  );
+}
+
 export default function NewTabDashboard({ session }: NewTabDashboardProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      window.open(`https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`, '_blank');
+    const q = searchQuery.trim();
+    if (!q) return;
+
+    const navigate = () => router.push(`/chat?query=${encodeURIComponent(q)}`);
+    // Use View Transitions API when available for hero-like animation
+    // @ts-ignore
+    if (typeof document !== 'undefined' && document.startViewTransition) {
+      // @ts-ignore
+      document.startViewTransition(() => navigate());
+    } else {
+      navigate();
     }
   };
 
   return (
-    <div className="min-h-screen bg-black p-6">
+    <div className="min-h-screen bg-black p-6 font-[300]">
       <div className="max-w-6xl mx-auto">
         {/* Logo */}
         <div className="mb-8">
@@ -303,7 +325,10 @@ export default function NewTabDashboard({ session }: NewTabDashboardProps) {
         {/* Search Bar */}
         <div className="mb-8">
           <form onSubmit={handleSearch}>
-            <div className={cn("relative rounded-2xl border border-gray-700/50", `bg-[${SEARCH_BG}]`)}>
+            <div
+              className={cn("relative rounded-2xl border border-gray-700/50", `bg-[${SEARCH_BG}]`)}
+              style={{ viewTransitionName: 'newtab-search' }}
+            >
               <div className="flex items-center px-6 py-4">
                 <Search className="w-5 h-5 text-gray-400 mr-4" />
                 
@@ -340,28 +365,42 @@ export default function NewTabDashboard({ session }: NewTabDashboardProps) {
           </form>
         </div>
 
-        {/* Main Widget Grid */}
-        <div className="grid grid-cols-4 auto-rows-fr gap-6 mb-8">
-          <AnalogClock />
-          <StockWidget />
-          <WeatherWidget />
-          <NotesWidget variant="blue" />
-          
-          <AppTile icon="▶️" name="Youtube" color="bg-red-600" />
-          <AppTile icon="💬" name="Essium" color="bg-purple-600" />
-          <AppTile icon="💬" name="Chat Raghav" color="bg-blue-600" />
-          <AppTile icon="☁️" name="Dash Cloudflare" color="bg-orange-600" />
-          
-          <NotesWidget />
-          <NewsWidget 
-            title="Why do developers use Next.js?"
+        {/* Main Widget Grid (exact 2 rows x 4 cols with fixed ratio) */}
+        <div className="grid grid-cols-4 auto-rows-[190px] gap-6 mb-6">
+          {/* Row 1 */}
+          <div className="rounded-3xl border border-white/10 overflow-hidden"><AnalogClock /></div>
+          <div className="rounded-3xl border border-white/10 overflow-hidden"><StockWidget /></div>
+          <div className="rounded-3xl border border-white/10 overflow-hidden"><WeatherWidget /></div>
+          <div className="rounded-3xl border border-white/10 overflow-hidden"><NotesWidget variant="blue" /></div>
+
+          {/* Row 2 */}
+          <div className="rounded-3xl border border-white/10 overflow-hidden"><ImageTile image="/images/demo-thumbnail.png" alt="tile" /></div>
+          <div className="rounded-3xl border border-white/10 overflow-hidden"><NotesWidget /></div>
+          <div className="rounded-3xl border border-white/10 overflow-hidden"><QuickDinnerWidget /></div>
+          <div className="rounded-3xl border border-white/10 overflow-hidden"><NewsWidget 
+            title="Trump posts 'Chipocalypse Now' meme threatening Chicago"
             image="/images/demo-thumbnail.png"
-          />
-          <NewsWidget 
-            title="South Korean president calls Japan 'indispensable partner'"
-            image="/images/demo-thumbnail.png"
-          />
-          <QuickDinnerWidget />
+          /></div>
+        </div>
+
+        {/* App shortcuts row */}
+        <div className="flex gap-4 mb-8">
+          <div className={cn("h-10 px-3 rounded-2xl border border-white/10 flex items-center gap-2", `bg-[${APP_TILE_BG}]`)}>
+            <div className="w-5 h-5 rounded-md bg-red-600" />
+            <span className="text-white/80 text-sm">Youtube</span>
+          </div>
+          <div className={cn("h-10 px-3 rounded-2xl border border-white/10 flex items-center gap-2", `bg-[${APP_TILE_BG}]`)}>
+            <div className="w-5 h-5 rounded-md bg-purple-600" />
+            <span className="text-white/80 text-sm">Chat Raghav</span>
+          </div>
+          <div className={cn("h-10 px-3 rounded-2xl border border-white/10 flex items-center gap-2", `bg-[${APP_TILE_BG}]`)}>
+            <div className="w-5 h-5 rounded-md bg-orange-600" />
+            <span className="text-white/80 text-sm">Dash Cloudflare</span>
+          </div>
+          <div className={cn("h-10 px-3 rounded-2xl border border-white/10 flex items-center gap-2", `bg-[${APP_TILE_BG}]`)}>
+            <div className="w-5 h-5 rounded-md bg-black" />
+            <span className="text-white/80 text-sm">X</span>
+          </div>
         </div>
 
         {/* Footer */}

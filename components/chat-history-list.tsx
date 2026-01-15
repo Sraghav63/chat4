@@ -2,6 +2,7 @@
 
 import useSWRInfinite from 'swr/infinite';
 import { useState, useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import { Input } from '@/components/ui/input';
 import { LoaderIcon, PlusIcon } from '@/components/icons';
 import { fetcher } from '@/lib/utils';
@@ -170,9 +171,26 @@ export function ChatHistoryList() {
             ) : (
               <div className="grid gap-3 sm:gap-4">
                 {searchResults.map((res) => {
-                  const htmlSnippet = res.snippet
-                    ? res.snippet.replace(new RegExp(`(${searchTerm})`, 'ig'), '<mark>$1</mark>')
+                  // Escape special regex characters in searchTerm to prevent regex injection
+                  const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                  const escapedSearchTerm = escapeRegex(searchTerm);
+                  
+                  // First sanitize the raw snippet to remove any malicious content
+                  const sanitizedSnippet = res.snippet 
+                    ? DOMPurify.sanitize(res.snippet, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }) 
                     : '';
+                  
+                  // Then add our highlighting (only <mark> tags)
+                  const highlightedSnippet = sanitizedSnippet
+                    ? sanitizedSnippet.replace(new RegExp(`(${escapedSearchTerm})`, 'ig'), '<mark>$1</mark>')
+                    : '';
+                  
+                  // Final sanitization allowing only our <mark> tags
+                  const safeHtmlSnippet = DOMPurify.sanitize(highlightedSnippet, { 
+                    ALLOWED_TAGS: ['mark'], 
+                    ALLOWED_ATTR: [] 
+                  });
+                  
                   return (
                     <Card key={res.chatId} className="group hover:shadow-md transition-all duration-200 rounded-2xl sm:rounded-3xl overflow-hidden">
                       <Link
@@ -186,10 +204,10 @@ export function ChatHistoryList() {
                               <div className="w-2 h-2 rounded-full bg-primary" />
                               {res.title}
                             </h3>
-                            {htmlSnippet && (
+                            {safeHtmlSnippet && (
                               <p
                                 className="text-xs sm:text-sm text-muted-foreground line-clamp-2"
-                                dangerouslySetInnerHTML={{ __html: htmlSnippet }}
+                                dangerouslySetInnerHTML={{ __html: safeHtmlSnippet }}
                               />
                             )}
                           </div>

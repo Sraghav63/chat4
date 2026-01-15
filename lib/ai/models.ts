@@ -1,4 +1,4 @@
-export const DEFAULT_CHAT_MODEL: string = 'meta-llama/llama-4-maverick:free';
+export const DEFAULT_CHAT_MODEL: string = 'openai/gpt-4.1';
 
 // Legacy interface kept for compatibility in parts of the codebase that may still
 // import it. The new model selector fetches models dynamically, so this list is
@@ -13,7 +13,7 @@ export interface ChatModel {
 export const chatModels: Array<ChatModel> = [
   {
     id: DEFAULT_CHAT_MODEL,
-    name: 'GPT-4o',
-    description: 'OpenAI flagship model (OpenRouter)',
+    name: 'GPT-4.1',
+    description: 'OpenAI GPT-4.1 (OpenRouter)',
   },
 ];
