@@ -1,0 +1,42 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Testing
+coverage
+test-results
+playwright-report
+blob-report
+
+# Next.js
+.next
+out
+build
+.turbo
+
+# Misc
+.DS_Store
+*.pem
+*.log
+
+# Environment files
+.env
+.env*.local
+.vercel
+
+# TypeScript build info (causes Docker cache mount issues)
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# IDE
+.vscode
+.idea
+
+# Git
+.git
+.gitignore
+
+# Documentation
+README*.md
+LICENSE

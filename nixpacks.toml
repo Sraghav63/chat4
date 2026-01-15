@@ -12,8 +12,12 @@ nixPkgs = ["nodejs_22", "python3", "gcc", "gnumake"]
 cmds = ["npm install -g corepack@0.24.1", "corepack enable", "pnpm install --frozen-lockfile"]
 
 [phases.build]
-# Disable automatic cache mounts to avoid Docker mounting issues
-cmds = ["pnpm run build"]
+# Build without incremental TypeScript compilation to avoid cache mount issues
+# Remove tsconfig.tsbuildinfo before build to prevent Docker mount errors
+cmds = [
+  "rm -f tsconfig.tsbuildinfo || true",
+  "pnpm run build"
+]
 
 [start]
 cmd = "pnpm run start"
