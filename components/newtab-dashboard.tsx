@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Session } from 'next-auth';
+import { useUser } from '@clerk/nextjs';
 import {
   Search,
   Hash,
@@ -22,7 +22,7 @@ const WIDGET_BG = 'rgb(22,28,36)';
 const APP_TILE_BG = 'rgb(30,37,46)';
 
 interface NewTabDashboardProps {
-  session: Session;
+  // No props needed - using Clerk's useUser hook
 }
 
 function AnalogClock() {
@@ -423,7 +423,7 @@ export default function NewTabDashboard({ session }: NewTabDashboardProps) {
         <div className="fixed bottom-6 left-6 flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center">
-              <span className="text-white text-sm">{session.user?.name?.[0] || 'A'}</span>
+              <span className="text-white text-sm">{user?.firstName?.[0] || user?.username?.[0] || 'A'}</span>
             </div>
             <span className="text-gray-500 text-sm">Account</span>
           </div>

@@ -10,6 +10,12 @@ const nextConfig: NextConfig = {
       {
         hostname: 'avatar.vercel.sh',
       },
+      {
+        hostname: 'img.clerk.com',
+      },
+      {
+        hostname: 'images.clerk.dev',
+      },
     ],
   },
 };

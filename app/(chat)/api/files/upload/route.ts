@@ -1,8 +1,8 @@
-import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-
-import { auth } from '@/app/(auth)/auth';
+import { auth } from '@clerk/nextjs/server';
+import { client } from '@/lib/db/convex-client';
+import { generateUploadUrl } from '../../../../convex/files';
 
 // Use Blob instead of File since File is not available in Node.js environment
 const FileSchema = z.object({
@@ -18,9 +18,9 @@ const FileSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const session = await auth();
+  const { userId } = await auth();
 
-  if (!session) {
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -51,11 +51,35 @@ export async function POST(request: Request) {
     const fileBuffer = await file.arrayBuffer();
 
     try {
-      const data = await put(`${filename}`, fileBuffer, {
-        access: 'public',
+      // Generate upload URL from Convex
+      const uploadUrl = await client.mutation(generateUploadUrl);
+      
+      // Upload file to Convex
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': file.type },
+        body: fileBuffer,
       });
 
-      return NextResponse.json(data);
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload to Convex');
+      }
+
+      const { storageId } = await uploadResponse.json();
+
+      // Get the file URL from Convex
+      const fileUrl = await client.query(
+        (await import('../../../../convex/files')).getFileUrl,
+        { storageId: storageId as any },
+      );
+
+      // Return file info compatible with Vercel Blob format
+      return NextResponse.json({
+        url: fileUrl || `${process.env.NEXT_PUBLIC_CONVEX_URL || 'https://dapper-hawk-31.convex.cloud'}/api/storage/${storageId}`,
+        pathname: storageId,
+        size: file.size,
+        contentType: file.type,
+      });
     } catch (error) {
       return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
     }

@@ -3,7 +3,7 @@
 import cx from 'classnames';
 import { format, isWithinInterval } from 'date-fns';
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from '@clerk/nextjs';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Line } from 'react-chartjs-2';
 import {
@@ -385,7 +385,7 @@ export function Weather({
 }: {
   weatherAtLocation?: WeatherAtLocation;
 }) {
-  const { data: session } = useSession();
+  const { user } = useUser();
   const [unit, setUnit] = useState<TempUnit>('C');
   const [currentView, setCurrentView] = useState<'current' | 'hourly' | 'daily'>('current');
 
@@ -404,7 +404,7 @@ export function Weather({
     }
 
     const loadTemperatureUnit = async () => {
-      if (session?.user && session.user.type === 'regular') {
+      if (user) {
         try {
           const response = await fetch('/api/user/temperature-unit');
           if (response.ok) {
@@ -433,14 +433,14 @@ export function Weather({
     };
 
     loadTemperatureUnit();
-  }, [session, shouldUseUserPreference, enhancedTemperatureUnit]);
+  }, [user, shouldUseUserPreference, enhancedTemperatureUnit]);
 
   // Save temperature unit preference (only for legacy data)
   useEffect(() => {
     if (!shouldUseUserPreference) return;
 
     const saveTemperatureUnit = async () => {
-      if (session?.user && session.user.type === 'regular') {
+      if (user) {
         try {
           await fetch('/api/user/temperature-unit', {
             method: 'POST',
@@ -468,7 +468,7 @@ export function Weather({
     if (unit) {
       saveTemperatureUnit();
     }
-  }, [unit, session, shouldUseUserPreference]);
+  }, [unit, user, shouldUseUserPreference]);
 
   // Extract weather data
   let currentTemp: number;

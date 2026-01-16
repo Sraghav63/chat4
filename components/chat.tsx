@@ -15,7 +15,6 @@ import { useArtifactSelector } from '@/hooks/use-artifact';
 import { unstable_serialize } from 'swr/infinite';
 import { getChatHistoryPaginationKey } from './sidebar-history';
 import { toast } from './toast';
-import type { Session } from 'next-auth';
 import { useSearchParams } from 'next/navigation';
 import { useChatVisibility } from '@/hooks/use-chat-visibility';
 import { useAutoResume } from '@/hooks/use-auto-resume';
@@ -24,18 +23,14 @@ import { ChatSDKError } from '@/lib/errors';
 export function Chat({
   id,
   initialMessages,
-  initialChatModel,
   initialVisibilityType,
   isReadonly,
-  session,
   autoResume,
 }: {
   id: string;
   initialMessages: Array<UIMessage>;
-  initialChatModel: string;
   initialVisibilityType: VisibilityType;
   isReadonly: boolean;
-  session: Session;
   autoResume: boolean;
 }) {
   const { mutate } = useSWRConfig();
@@ -44,22 +39,6 @@ export function Chat({
     chatId: id,
     initialVisibilityType,
   });
-
-  const [selectedModel, setSelectedModel] = useState(initialChatModel);
-  const requestModelRef = useRef<string>(initialChatModel);
-
-  useEffect(() => {
-    const handler = (e: CustomEvent<string>) => {
-      requestModelRef.current = e.detail;
-      setSelectedModel(e.detail);
-    };
-    // @ts-ignore
-    window.addEventListener('chat-model-changed', handler as any);
-    return () => {
-      // @ts-ignore
-      window.removeEventListener('chat-model-changed', handler as any);
-    };
-  }, []);
 
   const {
     messages,
@@ -81,8 +60,6 @@ export function Chat({
     generateId: generateUUID,
     fetch: fetchWithErrorHandlers,
     experimental_prepareRequestBody: (body) => {
-      const modelId = requestModelRef.current;
-
       const uiMsg = body.messages.at(-1);
 
       if (!uiMsg) return {} as any;
@@ -100,27 +77,11 @@ export function Chat({
           parts: textParts,
           experimental_attachments: uiMsg.experimental_attachments ?? [],
         },
-        selectedChatModel: modelId,
         selectedVisibilityType: visibilityType,
       } as any;
     },
     onFinish: () => {
       mutate(unstable_serialize(getChatHistoryPaginationKey));
-
-      // attach model id to last assistant message
-      setMessages((prev) => {
-        const updated = [...prev];
-        const lastAssistantIndex = updated
-          .map((m) => m.role)
-          .lastIndexOf('assistant');
-        if (lastAssistantIndex !== -1) {
-          updated[lastAssistantIndex] = {
-            ...(updated[lastAssistantIndex] as any),
-            modelId: requestModelRef.current,
-          } as any;
-        }
-        return updated;
-      });
     },
     onError: (error) => {
       // Always stop the streaming state to prevent UI from stalling
@@ -188,10 +149,8 @@ export function Chat({
       <div className="flex flex-col min-w-0 h-dvh bg-background">
         <ChatHeader
           chatId={id}
-          selectedModelId={selectedModel}
-          selectedVisibilityType={initialVisibilityType}
+          selectedVisibilityType={visibilityType}
           isReadonly={isReadonly}
-          session={session}
         />
 
         <Messages
@@ -223,7 +182,6 @@ export function Chat({
               setMessages={setMessages}
               append={append}
               selectedVisibilityType={visibilityType}
-              session={session}
             />
           )}
         </form>
@@ -245,7 +203,6 @@ export function Chat({
         votes={votes}
         isReadonly={isReadonly}
         selectedVisibilityType={visibilityType}
-        session={session}
       />
     </>
   );

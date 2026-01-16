@@ -13,9 +13,11 @@ import {
 
 export const user = pgTable('User', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
+  clerkId: varchar('clerkId', { length: 255 }).unique(), // Clerk user ID
   email: varchar('email', { length: 64 }).notNull(),
   password: varchar('password', { length: 64 }),
   temperatureUnit: varchar('temperatureUnit').default('C'),
+  githubCopilotToken: text('githubCopilotToken'), // Encrypted GitHub Copilot token
 });
 
 export type User = InferSelectModel<typeof user>;

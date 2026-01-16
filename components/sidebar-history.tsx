@@ -2,8 +2,14 @@
 
 import { isToday, isYesterday, subMonths, subWeeks } from 'date-fns';
 import { useParams, useRouter } from 'next/navigation';
-import type { User } from 'next-auth';
 import { useState } from 'react';
+
+type User = {
+  id: string;
+  email: string | null;
+  name: string | null;
+  imageUrl: string;
+};
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import {

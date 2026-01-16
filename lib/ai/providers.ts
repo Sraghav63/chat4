@@ -3,7 +3,7 @@ import {
   extractReasoningMiddleware,
   wrapLanguageModel,
 } from 'ai';
-import { openrouter } from '@openrouter/ai-sdk-provider';
+import { openai } from '@ai-sdk/openai';
 import { isTestEnvironment } from '../constants';
 import {
   artifactModel,
@@ -11,6 +11,11 @@ import {
   reasoningModel,
   titleModel,
 } from './models.test';
+
+// GitHub Copilot uses OpenAI's API under the hood
+// We'll use OpenAI's API with the user's GitHub Copilot token
+// Note: This requires users to connect their GitHub Copilot subscription
+// via device login and store their token
 
 export const myProvider = isTestEnvironment
   ? customProvider({
@@ -22,15 +27,19 @@ export const myProvider = isTestEnvironment
       },
     })
   : (() => {
+      // For now, using OpenAI's API as GitHub Copilot is built on OpenAI
+      // In production, this should use the user's GitHub Copilot token
+      // obtained via device login
       const base = customProvider({
         languageModels: {
-          'chat-model': openrouter('openai/gpt-4.1'),
+          'chat-model': openai('gpt-4o'),
           'chat-model-reasoning': wrapLanguageModel({
-            model: openrouter('anthropic/claude-3-5-sonnet'),
+            model: openai('gpt-4o'),
             middleware: extractReasoningMiddleware({ tagName: 'think' }),
           }),
-          'title-model': openrouter('openai/gpt-4o-mini'),
-          'artifact-model': openrouter('openai/gpt-4o'),
+          'title-model': openai('gpt-4o-mini'),
+          'artifact-model': openai('gpt-4o'),
+          'github-copilot': openai('gpt-4o'), // Placeholder - should use user's Copilot token
         },
       });
 
@@ -42,7 +51,8 @@ export const myProvider = isTestEnvironment
             // @ts-ignore – type narrowed in runtime
             return base.languageModel(id);
           } catch {
-            return openrouter(id);
+            // Fallback to default model
+            return base.languageModel('chat-model');
           }
         },
       } as typeof base;

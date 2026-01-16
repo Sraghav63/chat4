@@ -1,5 +1,5 @@
-import { auth } from '@/app/(auth)/auth';
-import { getChatById, getVotesByChatId, voteMessage } from '@/lib/db/queries';
+import { auth, currentUser } from '@clerk/nextjs/server';
+import { getChatById, getVotesByChatId, voteMessage, syncClerkUser } from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
 
 export async function GET(request: Request) {
@@ -13,11 +13,21 @@ export async function GET(request: Request) {
     ).toResponse();
   }
 
-  const session = await auth();
+  const { userId: clerkUserId } = await auth();
 
-  if (!session?.user) {
+  if (!clerkUserId) {
     return new ChatSDKError('unauthorized:vote').toResponse();
   }
+
+  const clerkUser = await currentUser();
+  if (!clerkUser) {
+    return new ChatSDKError('unauthorized:vote').toResponse();
+  }
+
+  const dbUser = await syncClerkUser(
+    clerkUserId,
+    clerkUser.emailAddresses[0]?.emailAddress || '',
+  );
 
   const chat = await getChatById({ id: chatId });
 
@@ -25,7 +35,7 @@ export async function GET(request: Request) {
     return new ChatSDKError('not_found:chat').toResponse();
   }
 
-  if (chat.userId !== session.user.id) {
+  if (chat.userId !== dbUser.id) {
     return new ChatSDKError('forbidden:vote').toResponse();
   }
 
@@ -49,11 +59,21 @@ export async function PATCH(request: Request) {
     ).toResponse();
   }
 
-  const session = await auth();
+  const { userId: clerkUserId } = await auth();
 
-  if (!session?.user) {
+  if (!clerkUserId) {
     return new ChatSDKError('unauthorized:vote').toResponse();
   }
+
+  const clerkUser = await currentUser();
+  if (!clerkUser) {
+    return new ChatSDKError('unauthorized:vote').toResponse();
+  }
+
+  const dbUser = await syncClerkUser(
+    clerkUserId,
+    clerkUser.emailAddresses[0]?.emailAddress || '',
+  );
 
   const chat = await getChatById({ id: chatId });
 
@@ -61,7 +81,7 @@ export async function PATCH(request: Request) {
     return new ChatSDKError('not_found:vote').toResponse();
   }
 
-  if (chat.userId !== session.user.id) {
+  if (chat.userId !== dbUser.id) {
     return new ChatSDKError('forbidden:vote').toResponse();
   }
 

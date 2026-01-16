@@ -1,21 +1,32 @@
-import { auth } from '../../(auth)/auth';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
-import { getUserMessageStats } from '@/lib/db/queries';
+import { getUserMessageStats, syncClerkUser } from '@/lib/db/queries';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Card } from '@/components/ui/card';
 import { SignOutForm } from '@/components/sign-out-form';
 import { Separator } from '@/components/ui/separator';
-import { getModelIcon } from '@/components/model-icons';
+import { GitHubCopilotConnection } from '@/components/github-copilot-connection';
+import { getModelIcon } from '@/components/model-selector';
 
 export const metadata = { title: 'Settings & Activity' };
 
 export default async function SettingsPage() {
-  const session = await auth();
-  if (!session?.user) {
-    redirect('/api/auth/guest');
+  const { userId: clerkUserId } = await auth();
+  if (!clerkUserId) {
+    redirect('/sign-in');
   }
 
-  const stats = await getUserMessageStats({ userId: session.user.id });
+  const clerkUser = await currentUser();
+  if (!clerkUser) {
+    redirect('/sign-in');
+  }
+
+  const dbUser = await syncClerkUser(
+    clerkUserId,
+    clerkUser.emailAddresses[0]?.emailAddress || '',
+  );
+
+  const stats = await getUserMessageStats({ userId: dbUser.id });
 
   return (
     <div className="min-h-screen bg-muted/40">
@@ -33,7 +44,7 @@ export default async function SettingsPage() {
                 <h2 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">Account</h2>
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Email address</p>
-                  <p className="font-mono text-xs sm:text-sm bg-muted px-3 py-2 rounded-md break-all">{session.user.email}</p>
+                  <p className="font-mono text-xs sm:text-sm bg-muted px-3 py-2 rounded-md break-all">{clerkUser.emailAddresses[0]?.emailAddress || 'No email'}</p>
                 </div>
                 
                 <Separator className="my-2" />
@@ -47,8 +58,18 @@ export default async function SettingsPage() {
 
             {/* Theme */}
             <Card className="p-6 sm:p-8 rounded-2xl sm:rounded-3xl">
-              <h2 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">Appearance</h2>
-              <ThemeSwitcher />
+              <div className="space-y-4 sm:space-y-6">
+                <h2 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">Appearance</h2>
+                <ThemeSwitcher />
+              </div>
+            </Card>
+
+            {/* GitHub Copilot */}
+            <Card className="p-6 sm:p-8 rounded-2xl sm:rounded-3xl">
+              <div className="space-y-4 sm:space-y-6">
+                <h2 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">Integrations</h2>
+                <GitHubCopilotConnection userId={dbUser.id} />
+              </div>
             </Card>
           </div>
 

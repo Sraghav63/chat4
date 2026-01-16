@@ -1,10 +1,9 @@
 'use client';
 
 import Image from 'next/image';
-import type { User } from 'next-auth';
-import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { LogIn } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
 
 import {
   SidebarMenu,
@@ -12,14 +11,18 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { LoaderIcon } from './icons';
-import { guestRegex } from '@/lib/constants';
 
-export function SidebarUserNav({ user }: { user: User }) {
-  const { data, status } = useSession();
+type User = {
+  id: string;
+  email: string | null;
+  name: string | null;
+  imageUrl: string;
+};
 
-  const isGuest = guestRegex.test(data?.user?.email ?? '');
+export function SidebarUserNav({ user }: { user: User | undefined }) {
+  const { isLoaded } = useUser();
 
-  if (status === 'loading') {
+  if (!isLoaded) {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
@@ -39,12 +42,12 @@ export function SidebarUserNav({ user }: { user: User }) {
     );
   }
 
-  // If guest, show Sign In link
-  if (isGuest) {
+  // If not logged in, show Sign In link
+  if (!user) {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <Link href="/login" className="flex-1">
+          <Link href="/sign-in" className="flex-1">
             <SidebarMenuButton
               data-testid="sign-in-nav-button"
               className="bg-background hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-10 w-full"
@@ -68,14 +71,14 @@ export function SidebarUserNav({ user }: { user: User }) {
             className="bg-background hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-10 w-full"
           >
             <Image
-              src={`https://avatar.vercel.sh/${user.email}`}
-              alt={user.email ?? 'User Avatar'}
+              src={user.imageUrl || `https://avatar.vercel.sh/${user.email}`}
+              alt={user.email ?? user.name ?? 'User Avatar'}
               width={24}
               height={24}
               className="rounded-full"
             />
             <span data-testid="user-email" className="truncate">
-              {user?.email}
+              {user.name || user.email || 'User'}
             </span>
           </SidebarMenuButton>
         </Link>

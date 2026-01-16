@@ -1,10 +1,11 @@
-import { auth } from '@/app/(auth)/auth';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { generateUUID } from '@/lib/utils';
 import {
   getChatById,
   getMessagesByChatId,
   saveChat,
   saveMessages,
+  syncClerkUser,
 } from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
 import type { VisibilityType } from '@/components/visibility-selector';
@@ -23,17 +24,27 @@ export async function POST(request: Request) {
     return new ChatSDKError('bad_request:api').toResponse();
   }
 
-  const session = await auth();
-  if (!session?.user) {
+  const { userId: clerkUserId } = await auth();
+  if (!clerkUserId) {
     return new ChatSDKError('unauthorized:chat').toResponse();
   }
+
+  const clerkUser = await currentUser();
+  if (!clerkUser) {
+    return new ChatSDKError('unauthorized:chat').toResponse();
+  }
+
+  const dbUser = await syncClerkUser(
+    clerkUserId,
+    clerkUser.emailAddresses[0]?.emailAddress || '',
+  );
 
   const originalChat = await getChatById({ id: body.chatId });
   if (!originalChat) {
     return new ChatSDKError('not_found:chat').toResponse();
   }
 
-  if (originalChat.userId !== session.user.id) {
+  if (originalChat.userId !== dbUser.id) {
     return new ChatSDKError('forbidden:chat').toResponse();
   }
 
@@ -50,7 +61,7 @@ export async function POST(request: Request) {
 
   await saveChat({
     id: newChatId,
-    userId: session.user.id,
+    userId: dbUser.id,
     title: `↳ ${originalChat.title}`.slice(0, 255),
     visibility: originalChat.visibility as VisibilityType,
   });

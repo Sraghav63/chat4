@@ -1,18 +1,26 @@
-import { signOut } from '@/app/(auth)/auth';
+'use client';
+
+import { useClerk } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
 
 export const SignOutForm = () => {
+  const { signOut } = useClerk();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push('/');
+  };
+
   return (
-    <form
-      action={async () => {
-        'use server';
-        await signOut({ redirectTo: '/' });
-      }}
+    <Button 
+      onClick={handleSignOut} 
+      variant="destructive" 
+      size="lg" 
       className="w-full"
     >
-      <Button type="submit" variant="destructive" size="lg" className="w-full">
-        Sign out
-      </Button>
-    </form>
+      Sign out
+    </Button>
   );
 };

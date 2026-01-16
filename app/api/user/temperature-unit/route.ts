@@ -1,16 +1,26 @@
-import { auth } from '@/app/(auth)/auth';
-import { getUserTemperatureUnit, updateUserTemperatureUnit } from '@/lib/db/queries';
+import { auth, currentUser } from '@clerk/nextjs/server';
+import { getUserTemperatureUnit, updateUserTemperatureUnit, syncClerkUser } from '@/lib/db/queries';
 import { ChatSDKError } from '@/lib/errors';
 
 export async function GET() {
-  const session = await auth();
+  const { userId: clerkUserId } = await auth();
 
-  if (!session?.user) {
+  if (!clerkUserId) {
     return new ChatSDKError('unauthorized:api').toResponse();
   }
 
   try {
-    const temperatureUnit = await getUserTemperatureUnit({ id: session.user.id });
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return new ChatSDKError('unauthorized:api').toResponse();
+    }
+
+    const dbUser = await syncClerkUser(
+      clerkUserId,
+      clerkUser.emailAddresses[0]?.emailAddress || '',
+    );
+
+    const temperatureUnit = await getUserTemperatureUnit({ id: dbUser.id });
     return Response.json({ temperatureUnit });
   } catch (error) {
     return new ChatSDKError('bad_request:api', 'Failed to get temperature unit').toResponse();
@@ -18,13 +28,23 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
+  const { userId: clerkUserId } = await auth();
 
-  if (!session?.user) {
+  if (!clerkUserId) {
     return new ChatSDKError('unauthorized:api').toResponse();
   }
 
   try {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return new ChatSDKError('unauthorized:api').toResponse();
+    }
+
+    const dbUser = await syncClerkUser(
+      clerkUserId,
+      clerkUser.emailAddresses[0]?.emailAddress || '',
+    );
+
     const { temperatureUnit } = await request.json();
     
     if (temperatureUnit !== 'C' && temperatureUnit !== 'F') {
@@ -32,7 +52,7 @@ export async function POST(request: Request) {
     }
 
     await updateUserTemperatureUnit({ 
-      id: session.user.id, 
+      id: dbUser.id, 
       temperatureUnit 
     });
 

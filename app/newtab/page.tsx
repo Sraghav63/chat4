@@ -1,14 +1,13 @@
-import { cookies } from 'next/headers';
-import { auth } from '../(auth)/auth';
+import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import NewTabDashboard from '@/components/newtab-dashboard';
 
 export default async function NewTabPage() {
-  const session = await auth();
+  const { userId } = await auth();
 
-  if (!session) {
-    redirect('/api/auth/guest');
+  if (!userId) {
+    redirect('/sign-in');
   }
 
-  return <NewTabDashboard session={session} />;
+  return <NewTabDashboard />;
 }

@@ -17,7 +17,7 @@ const DropdownMenu = ({ open: openProp, onOpenChange, children, ...rest }: { ope
   const value = React.useMemo<MenuContextType>(() => ({ open: isControlled ? !!openProp : open, setOpen: (v) => (isControlled ? onOpenChange?.(v) : setOpen(v)) }), [isControlled, open, openProp, onOpenChange]);
   return (
     <MenuContext.Provider value={value}>
-      <div {...rest}>{children}</div>
+      <div className="relative" {...rest}>{children}</div>
     </MenuContext.Provider>
   );
 };
@@ -94,11 +94,13 @@ const DropdownMenuContent = React.forwardRef<
   return (
     <div
       ref={ref}
-      style={{ marginTop: side === 'top' ? undefined : sideOffset, marginBottom: side === 'top' ? sideOffset : undefined, ...style }}
       className={cn(
-        'z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
+        'absolute z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
+        side === 'top' ? 'bottom-full mb-2' : 'top-full mt-2',
+        align === 'end' ? 'right-0' : align === 'center' ? 'left-1/2 -translate-x-1/2' : 'left-0',
         className,
       )}
+      style={style}
       {...props}
     />
   );

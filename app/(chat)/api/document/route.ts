@@ -1,4 +1,5 @@
-import { auth } from '@/app/(auth)/auth';
+import { auth, currentUser } from '@clerk/nextjs/server';
+import { syncClerkUser } from '@/lib/db/queries';
 import type { ArtifactKind } from '@/components/artifact';
 import {
   deleteDocumentsByIdAfterTimestamp,
@@ -18,11 +19,21 @@ export async function GET(request: Request) {
     ).toResponse();
   }
 
-  const session = await auth();
+  const { userId: clerkUserId } = await auth();
 
-  if (!session?.user) {
+  if (!clerkUserId) {
     return new ChatSDKError('unauthorized:document').toResponse();
   }
+
+  const clerkUser = await currentUser();
+  if (!clerkUser) {
+    return new ChatSDKError('unauthorized:document').toResponse();
+  }
+
+  const dbUser = await syncClerkUser(
+    clerkUserId,
+    clerkUser.emailAddresses[0]?.emailAddress || '',
+  );
 
   const documents = await getDocumentsById({ id });
 
@@ -32,7 +43,7 @@ export async function GET(request: Request) {
     return new ChatSDKError('not_found:document').toResponse();
   }
 
-  if (document.userId !== session.user.id) {
+  if (document.userId !== dbUser.id) {
     return new ChatSDKError('forbidden:document').toResponse();
   }
 
@@ -50,11 +61,21 @@ export async function POST(request: Request) {
     ).toResponse();
   }
 
-  const session = await auth();
+  const { userId: clerkUserId } = await auth();
 
-  if (!session?.user) {
+  if (!clerkUserId) {
     return new ChatSDKError('not_found:document').toResponse();
   }
+
+  const clerkUser = await currentUser();
+  if (!clerkUser) {
+    return new ChatSDKError('not_found:document').toResponse();
+  }
+
+  const dbUser = await syncClerkUser(
+    clerkUserId,
+    clerkUser.emailAddresses[0]?.emailAddress || '',
+  );
 
   const {
     content,
@@ -68,7 +89,7 @@ export async function POST(request: Request) {
   if (documents.length > 0) {
     const [document] = documents;
 
-    if (document.userId !== session.user.id) {
+    if (document.userId !== dbUser.id) {
       return new ChatSDKError('forbidden:document').toResponse();
     }
   }
@@ -78,7 +99,7 @@ export async function POST(request: Request) {
     content,
     title,
     kind,
-    userId: session.user.id,
+    userId: dbUser.id,
   });
 
   return Response.json(document, { status: 200 });
@@ -103,17 +124,27 @@ export async function DELETE(request: Request) {
     ).toResponse();
   }
 
-  const session = await auth();
+  const { userId: clerkUserId } = await auth();
 
-  if (!session?.user) {
+  if (!clerkUserId) {
     return new ChatSDKError('unauthorized:document').toResponse();
   }
+
+  const clerkUser = await currentUser();
+  if (!clerkUser) {
+    return new ChatSDKError('unauthorized:document').toResponse();
+  }
+
+  const dbUser = await syncClerkUser(
+    clerkUserId,
+    clerkUser.emailAddresses[0]?.emailAddress || '',
+  );
 
   const documents = await getDocumentsById({ id });
 
   const [document] = documents;
 
-  if (document.userId !== session.user.id) {
+  if (document.userId !== dbUser.id) {
     return new ChatSDKError('forbidden:document').toResponse();
   }
 

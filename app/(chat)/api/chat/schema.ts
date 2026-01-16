@@ -23,7 +23,6 @@ export const postRequestBodySchema = z.object({
       )
       .optional(),
   }),
-  selectedChatModel: z.string().min(1).max(100),
   selectedVisibilityType: z.enum(['public', 'private']),
 });
 

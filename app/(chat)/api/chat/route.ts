@@ -5,7 +5,7 @@ import {
   smoothStream,
   streamText,
 } from 'ai';
-import { auth, type UserType } from '@/app/(auth)/auth';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { type RequestHints, systemPrompt } from '@/lib/ai/prompts';
 import {
   createStreamId,
@@ -16,6 +16,7 @@ import {
   getStreamIdsByChatId,
   saveChat,
   saveMessages,
+  syncClerkUser,
 } from '@/lib/db/queries';
 import { generateUUID, getTrailingMessageId } from '@/lib/utils';
 import { generateTitleFromUserMessage } from '../../actions';
@@ -27,7 +28,7 @@ import { getStocks } from '@/lib/ai/tools/get-stocks';
 import { webSearch } from '@/lib/ai/tools/web-search';
 import { isProductionEnvironment } from '@/lib/constants';
 import { myProvider } from '@/lib/ai/providers';
-import { entitlementsByUserType } from '@/lib/ai/entitlements';
+import { defaultEntitlements } from '@/lib/ai/entitlements';
 import { postRequestBodySchema, type PostRequestBody } from './schema';
 import { geolocation } from '@vercel/functions';
 import {
@@ -50,11 +51,9 @@ function getStreamContext() {
         waitUntil: after,
       });
     } catch (error: any) {
-      if (error.message.includes('REDIS_URL')) {
-        console.log(
-          ' > Resumable streams are disabled due to missing REDIS_URL',
-        );
-      } else {
+      // Resumable streams disabled - using Convex instead of Redis
+      console.log(' > Resumable streams are disabled (using Convex)');
+      if (!error.message.includes('REDIS_URL')) {
         console.error(error);
       }
     }
@@ -74,23 +73,32 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { id, message, selectedChatModel, selectedVisibilityType } =
+    const { id, message, selectedVisibilityType } =
       requestBody;
 
-    const session = await auth();
+    const { userId: clerkUserId } = await auth();
 
-    if (!session?.user) {
+    if (!clerkUserId) {
       return new ChatSDKError('unauthorized:chat').toResponse();
     }
 
-    const userType: UserType = session.user.type;
+    // Sync Clerk user with database
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return new ChatSDKError('unauthorized:chat').toResponse();
+    }
+
+    const dbUser = await syncClerkUser(
+      clerkUserId,
+      clerkUser.emailAddresses[0]?.emailAddress || '',
+    );
 
     const messageCount = await getMessageCountByUserId({
-      id: session.user.id,
+      id: dbUser.id,
       differenceInHours: 24,
     });
 
-    if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
+    if (messageCount > defaultEntitlements.maxMessagesPerDay) {
       return new ChatSDKError('rate_limit:chat').toResponse();
     }
 
@@ -103,12 +111,12 @@ export async function POST(request: Request) {
 
       await saveChat({
         id,
-        userId: session.user.id,
+        userId: dbUser.id,
         title,
         visibility: selectedVisibilityType,
       });
     } else {
-      if (chat.userId !== session.user.id) {
+      if (chat.userId !== dbUser.id) {
         return new ChatSDKError('forbidden:chat').toResponse();
       }
     }
@@ -186,7 +194,7 @@ export async function POST(request: Request) {
             parts: message.parts,
             attachments: message.experimental_attachments ?? [],
             createdAt: new Date(),
-            modelId: selectedChatModel,
+            modelId: 'github-copilot',
           },
         ],
       });
@@ -198,48 +206,30 @@ export async function POST(request: Request) {
     const stream = createDataStream({
       execute: (dataStream) => {
         const result = streamText({
-          model: myProvider.languageModel(selectedChatModel),
-          system: systemPrompt({ selectedChatModel, requestHints }),
+          model: myProvider.languageModel('github-copilot'),
+          system: systemPrompt({ selectedChatModel: 'github-copilot', requestHints }),
           messages: processedMessages,
           maxSteps: 5,
-          // Only include function calling tools if the selected model is known to support them.
-          ...(() => {
-            const lowerId = selectedChatModel.toLowerCase();
-            const supportsTools =
-              // Most OpenAI, Anthropic, and Google models support tool calling.
-              lowerId.startsWith('openai/') ||
-              lowerId.startsWith('anthropic/') ||
-              lowerId.startsWith('google/') ||
-              // Explicitly allow any model id that contains 'tool' capability indicators.
-              // For now we assume free / open-source models (often suffixed with ":free") don't.
-              (!lowerId.endsWith(':free') &&
-                (lowerId.includes('gpt') || lowerId.includes('claude')));
-
-            if (!supportsTools) return {};
-
-            return {
-              experimental_activeTools: [
-                'webSearch',
-                'getWeather', 
-                'getStocks',
-                'createDocument',
-                'updateDocument',
-                'requestSuggestions',
-              ],
-              tools: {
-                webSearch,
-                getWeather,
-                getStocks,
-                createDocument: createDocument({ session, dataStream }),
-                updateDocument: updateDocument({ session, dataStream }),
-                requestSuggestions: requestSuggestions({ session, dataStream }),
-              },
-            };
-          })(),
+          experimental_activeTools: [
+            'webSearch',
+            'getWeather', 
+            'getStocks',
+            'createDocument',
+            'updateDocument',
+            'requestSuggestions',
+          ],
+          tools: {
+            webSearch,
+            getWeather,
+            getStocks,
+            createDocument: createDocument({ userId: dbUser.id, dataStream }),
+            updateDocument: updateDocument({ userId: dbUser.id, dataStream }),
+            requestSuggestions: requestSuggestions({ userId: dbUser.id, dataStream }),
+          },
           experimental_transform: smoothStream({ chunking: 'word' }),
           experimental_generateMessageId: generateUUID,
           onFinish: async ({ response }) => {
-            if (session.user?.id) {
+            if (userId) {
               try {
                 const assistantId = getTrailingMessageId({
                   messages: response.messages.filter(
@@ -266,7 +256,7 @@ export async function POST(request: Request) {
                       attachments:
                         assistantMessage.experimental_attachments ?? [],
                       createdAt: new Date(),
-                      modelId: selectedChatModel,
+                      modelId: 'github-copilot',
                     },
                   ],
                 });
@@ -323,11 +313,22 @@ export async function GET(request: Request) {
     return new ChatSDKError('bad_request:api').toResponse();
   }
 
-  const session = await auth();
+  const { userId: clerkUserId } = await auth();
 
-  if (!session?.user) {
+  if (!clerkUserId) {
     return new ChatSDKError('unauthorized:chat').toResponse();
   }
+
+  // Sync Clerk user with database
+  const clerkUser = await currentUser();
+  if (!clerkUser) {
+    return new ChatSDKError('unauthorized:chat').toResponse();
+  }
+
+  const dbUser = await syncClerkUser(
+    clerkUserId,
+    clerkUser.emailAddresses[0]?.emailAddress || '',
+  );
 
   let chat: Chat;
 
@@ -341,7 +342,7 @@ export async function GET(request: Request) {
     return new ChatSDKError('not_found:chat').toResponse();
   }
 
-  if (chat.visibility === 'private' && chat.userId !== session.user.id) {
+  if (chat.visibility === 'private' && chat.userId !== dbUser.id) {
     return new ChatSDKError('forbidden:chat').toResponse();
   }
 
@@ -411,15 +412,26 @@ export async function DELETE(request: Request) {
     return new ChatSDKError('bad_request:api').toResponse();
   }
 
-  const session = await auth();
+  const { userId: clerkUserId } = await auth();
 
-  if (!session?.user) {
+  if (!clerkUserId) {
     return new ChatSDKError('unauthorized:chat').toResponse();
   }
 
+  // Sync Clerk user with database
+  const clerkUser = await currentUser();
+  if (!clerkUser) {
+    return new ChatSDKError('unauthorized:chat').toResponse();
+  }
+
+  const dbUser = await syncClerkUser(
+    clerkUserId,
+    clerkUser.emailAddresses[0]?.emailAddress || '',
+  );
+
   const chat = await getChatById({ id });
 
-  if (chat.userId !== session.user.id) {
+  if (chat.userId !== dbUser.id) {
     return new ChatSDKError('forbidden:chat').toResponse();
   }
 

@@ -1,7 +1,18 @@
 'use client';
 
-import { useState, useMemo, useOptimistic, startTransition, useEffect } from 'react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  useState,
+  useMemo,
+  useOptimistic,
+  startTransition,
+  useEffect,
+} from 'react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import useSWR from 'swr';
 import { saveChatModelAsCookie } from '@/app/(chat)/actions';
 import { Button } from '@/components/ui/button';
@@ -18,7 +29,7 @@ import {
   StarIcon,
   StarFillIcon,
 } from './icons';
-import type { Session } from 'next-auth';
+import { Github, Loader2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +40,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 
 type OpenRouterModel = {
   id: string;
@@ -47,10 +59,7 @@ type OpenRouterModel = {
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-const FAVORITE_IDS = [
-  'openai/gpt-4o',
-  'openai/gpt-4o-mini',
-];
+const FAVORITE_IDS = ['openai/gpt-4o', 'openai/gpt-4o-mini'];
 
 // A small curated set of popular models that renders instantly while the full
 // OpenRouter list is still loading. Keeping this list in-memory means the
@@ -71,9 +80,18 @@ const DEFAULT_IDS = [
   'deepseek/deepseek-r1-0528:free',
 ];
 
-const PROVIDER_ORDER = ['google', 'anthropic', 'openai', 'x-ai', 'meta', 'mistral', 'deepseek'];
+const PROVIDER_ORDER = [
+  'google',
+  'anthropic',
+  'openai',
+  'x-ai',
+  'meta',
+  'mistral',
+  'deepseek',
+];
 
-const ICON_CONTAINER_CLASSES = "w-6 h-6 rounded-lg flex items-center justify-center";
+const ICON_CONTAINER_CLASSES =
+  'w-6 h-6 rounded-lg flex items-center justify-center';
 
 const EXPENSIVE_MODEL_IDS = new Set<string>([
   'openai/o1-pro',
@@ -188,7 +206,12 @@ const getModelIcon = (modelId: string, modelName: string) => {
   }
 
   // Meta/Llama models - infinity symbol
-  if (provider === 'meta' || provider.startsWith('meta') || provider.includes('llama') || name.includes('llama')) {
+  if (
+    provider === 'meta' ||
+    provider.startsWith('meta') ||
+    provider.includes('llama') ||
+    name.includes('llama')
+  ) {
     return (
       <div className={ICON_CONTAINER_CLASSES}>
         <img
@@ -230,7 +253,13 @@ const getModelIcon = (modelId: string, modelName: string) => {
   if (provider === 'groq' || name.includes('groq')) {
     return (
       <div className={ICON_CONTAINER_CLASSES}>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-black dark:text-white">
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          className="text-black dark:text-white"
+        >
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.5 6L12 10.5 8.5 8 12 5.5 15.5 8zM8.5 16L12 13.5 15.5 16 12 18.5 8.5 16z" />
         </svg>
       </div>
@@ -239,7 +268,9 @@ const getModelIcon = (modelId: string, modelName: string) => {
 
   // Default fallback
   return (
-    <div className={`${ICON_CONTAINER_CLASSES} bg-muted text-muted-foreground text-xs font-medium`}>
+    <div
+      className={`${ICON_CONTAINER_CLASSES} bg-muted text-muted-foreground text-xs font-medium`}
+    >
       {provider.charAt(0).toUpperCase()}
     </div>
   );
@@ -248,43 +279,48 @@ const getModelIcon = (modelId: string, modelName: string) => {
 // Get pricing tier based on model pricing
 const getPricingTier = (model: OpenRouterModel) => {
   if (!model.pricing) return 'unknown';
-  
+
   // OpenRouter returns pricing per token, convert to per 1M tokens for calculation
-  const promptPricePerToken = typeof model.pricing.prompt === 'string' 
-    ? Number.parseFloat(model.pricing.prompt) || 0
-    : (model.pricing.prompt as number) || 0;
-  const completionPricePerToken = typeof model.pricing.completion === 'string'
-    ? Number.parseFloat(model.pricing.completion) || 0
-    : (model.pricing.completion as number) || 0;
-  
-  const avgPricePer1M = ((promptPricePerToken + completionPricePerToken) / 2) * 1000000;
-  
+  const promptPricePerToken =
+    typeof model.pricing.prompt === 'string'
+      ? Number.parseFloat(model.pricing.prompt) || 0
+      : (model.pricing.prompt as number) || 0;
+  const completionPricePerToken =
+    typeof model.pricing.completion === 'string'
+      ? Number.parseFloat(model.pricing.completion) || 0
+      : (model.pricing.completion as number) || 0;
+
+  const avgPricePer1M =
+    ((promptPricePerToken + completionPricePerToken) / 2) * 1000000;
+
   // Price thresholds (per 1M tokens)
-  if (avgPricePer1M <= 0.5) return 'cheap';      // Green - very cheap/free
-  if (avgPricePer1M <= 5) return 'moderate';     // Yellow - moderate
-  return 'expensive';                             // Red - expensive
+  if (avgPricePer1M <= 0.5) return 'cheap'; // Green - very cheap/free
+  if (avgPricePer1M <= 5) return 'moderate'; // Yellow - moderate
+  return 'expensive'; // Red - expensive
 };
 
 // Format pricing for display
 const formatPricing = (model: OpenRouterModel) => {
   if (!model.pricing) return 'Pricing unavailable';
-  
+
   // OpenRouter returns pricing per token, we need to convert to per 1M tokens
-  const promptPricePerToken = typeof model.pricing.prompt === 'string' 
-    ? Number.parseFloat(model.pricing.prompt)
-    : model.pricing.prompt;
-  const completionPricePerToken = typeof model.pricing.completion === 'string'
-    ? Number.parseFloat(model.pricing.completion)
-    : model.pricing.completion;
-  
+  const promptPricePerToken =
+    typeof model.pricing.prompt === 'string'
+      ? Number.parseFloat(model.pricing.prompt)
+      : model.pricing.prompt;
+  const completionPricePerToken =
+    typeof model.pricing.completion === 'string'
+      ? Number.parseFloat(model.pricing.completion)
+      : model.pricing.completion;
+
   if (promptPricePerToken === 0 && completionPricePerToken === 0) {
     return 'Free';
   }
-  
+
   // Convert to per 1M tokens and format nicely
   const promptPer1M = (promptPricePerToken * 1000000).toFixed(2);
   const completionPer1M = (completionPricePerToken * 1000000).toFixed(2);
-  
+
   return `$${promptPer1M}/$${completionPer1M} per 1M tokens`;
 };
 
@@ -293,13 +329,13 @@ const PricingDot = ({ model }: { model: OpenRouterModel }) => {
   const tier = getPricingTier(model);
   const colors = {
     cheap: 'bg-green-500',
-    moderate: 'bg-yellow-500', 
+    moderate: 'bg-yellow-500',
     expensive: 'bg-red-500',
-    unknown: 'bg-gray-400'
+    unknown: 'bg-gray-400',
   };
-  
+
   return (
-    <div 
+    <div
       className={`w-2 h-2 rounded-full ${colors[tier]}`}
       title={formatPricing(model)}
     />
@@ -314,52 +350,104 @@ const getCapabilityBadges = (model: OpenRouterModel) => {
   const badges = [];
   const name = model.name.toLowerCase();
   const id = model.id.toLowerCase();
-  
+
   // Vision capability
-  if (model.architecture?.input_modalities?.includes('image') || 
-      name.includes('vision') || name.includes('4o') || name.includes('flash')) {
+  if (
+    model.architecture?.input_modalities?.includes('image') ||
+    name.includes('vision') ||
+    name.includes('4o') ||
+    name.includes('flash')
+  ) {
     badges.push(
-      <div key="vision" className="w-4 h-4 rounded bg-green-500/20 flex items-center justify-center">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-green-400">
-          <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+      <div
+        key="vision"
+        className="w-4 h-4 rounded bg-green-500/20 flex items-center justify-center"
+      >
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          className="text-green-400"
+        >
+          <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
         </svg>
-      </div>
+      </div>,
     );
   }
-  
+
   // Code capability
-  if (name.includes('code') || name.includes('coder') || id.includes('deepseek')) {
+  if (
+    name.includes('code') ||
+    name.includes('coder') ||
+    id.includes('deepseek')
+  ) {
     badges.push(
-      <div key="code" className="w-4 h-4 rounded bg-blue-500/20 flex items-center justify-center">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-blue-400">
-          <path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0L19.2 12l-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>
+      <div
+        key="code"
+        className="w-4 h-4 rounded bg-blue-500/20 flex items-center justify-center"
+      >
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          className="text-blue-400"
+        >
+          <path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0L19.2 12l-4.6-4.6L16 6l6 6-6 6-1.4-1.4z" />
         </svg>
-      </div>
+      </div>,
     );
   }
-  
+
   // Reasoning capability
-  if (name.includes('reasoning') || name.includes('o1') || name.includes('o3')) {
+  if (
+    name.includes('reasoning') ||
+    name.includes('o1') ||
+    name.includes('o3')
+  ) {
     badges.push(
-      <div key="reasoning" className="w-4 h-4 rounded bg-purple-500/20 flex items-center justify-center">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-purple-400">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+      <div
+        key="reasoning"
+        className="w-4 h-4 rounded bg-purple-500/20 flex items-center justify-center"
+      >
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          className="text-purple-400"
+        >
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
         </svg>
-      </div>
+      </div>,
     );
   }
-  
+
   // Experimental/Beta
-  if (name.includes('preview') || name.includes('beta') || name.includes('experimental')) {
+  if (
+    name.includes('preview') ||
+    name.includes('beta') ||
+    name.includes('experimental')
+  ) {
     badges.push(
-      <div key="experimental" className="w-4 h-4 rounded bg-orange-500/20 flex items-center justify-center">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-orange-400">
-          <path d="M9 11H7v6h2v-6zm4 0h-2v6h2v-6zm4 0h-2v6h2v-6zM4 19h16v2H4z"/>
+      <div
+        key="experimental"
+        className="w-4 h-4 rounded bg-orange-500/20 flex items-center justify-center"
+      >
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          className="text-orange-400"
+        >
+          <path d="M9 11H7v6h2v-6zm4 0h-2v6h2v-6zm4 0h-2v6h2v-6zM4 19h16v2H4z" />
         </svg>
-      </div>
+      </div>,
     );
   }
-  
+
   return badges;
 };
 
@@ -371,8 +459,9 @@ const prettyName = (id: string, name?: string) => {
       // Ensure GPT is always fully capitalised
       .replace(/gpt/gi, 'GPT')
       // Capitalise known keywords (except gpt which we handled above)
-      .replace(/\b(llama|sonnet|flash|mini|max|nano|opus|maverick|gemini|claude)\b/gi, (m) =>
-        m.charAt(0).toUpperCase() + m.slice(1).toLowerCase(),
+      .replace(
+        /\b(llama|sonnet|flash|mini|max|nano|opus|maverick|gemini|claude)\b/gi,
+        (m) => m.charAt(0).toUpperCase() + m.slice(1).toLowerCase(),
       )
       // Title-case remaining words starting with a-z
       .replace(/\b([a-z])/g, (m) => m.toUpperCase());
@@ -387,34 +476,53 @@ const prettyName = (id: string, name?: string) => {
 const getModelSubtitle = (model: OpenRouterModel) => {
   const name = model.name.toLowerCase();
   const id = model.id.toLowerCase();
-  
-  if (name.includes('thinking') || name.includes('reasoning')) return '(Thinking)';
+
+  if (name.includes('thinking') || name.includes('reasoning'))
+    return '(Thinking)';
   if (name.includes('preview') || name.includes('beta')) return '(Preview)';
   if (name.includes('experimental')) return '(Experimental)';
   if (id.includes('openrouter')) return '(OpenRouter)';
   if (name.includes('distilled')) return '(Distilled)';
   if (name.includes('fireworks')) return '(Fireworks)';
-  
+
   return '';
 };
 
 export function ModelSelector({
-  session,
   selectedModelId,
   onSelect,
   className,
 }: {
-  session: Session;
   selectedModelId: string;
   onSelect?: (id: string) => void;
 } & React.ComponentProps<typeof Button>) {
   const [open, setOpen] = useState(false);
-  const [optimisticModelId, setOptimisticModelId] = useOptimistic(selectedModelId);
+  const [optimisticModelId, setOptimisticModelId] =
+    useOptimistic(selectedModelId);
   const [search, setSearch] = useState('');
   const [showExpensiveDialog, setShowExpensiveDialog] = useState(false);
   const [pendingModelId, setPendingModelId] = useState<string | null>(null);
+  const [copilotConnection, setCopilotConnection] = useState<{
+    deviceCode: string;
+    userCode: string;
+    verificationUri: string;
+    expiresIn: number;
+    interval: number;
+  } | null>(null);
+  const [isCopilotConnecting, setIsCopilotConnecting] = useState(false);
+  const [copilotError, setCopilotError] = useState<string | null>(null);
 
-  const { data } = useSWR<{ data: OpenRouterModel[] }>('/api/openrouter/models', fetcher);
+  const { data } = useSWR<{ data: OpenRouterModel[] }>(
+    '/api/openrouter/models',
+    fetcher,
+  );
+  const {
+    data: copilotStatus,
+    error: copilotStatusError,
+    mutate: mutateCopilotStatus,
+  } = useSWR<{ connected: boolean }>('/api/github-copilot/status', fetcher);
+  const isCopilotLoading = !copilotStatus && !copilotStatusError;
+  const isCopilotConnected = copilotStatus?.connected ?? false;
   // Use models returned from API if available, otherwise fall back to a minimal
   // list built from DEFAULT_IDS so users always see something to pick.
   const models: OpenRouterModel[] = useMemo(() => {
@@ -427,7 +535,7 @@ export function ModelSelector({
     return DEFAULT_IDS.map((id) => {
       const name = id.split('/')[1] ?? id;
       let pricing = { prompt: 0, completion: 0 }; // Default to free
-      
+
       // Add realistic pricing for known models (per token)
       if (id.includes('gpt-4o')) {
         pricing = { prompt: 0.0000025, completion: 0.00001 };
@@ -442,7 +550,7 @@ export function ModelSelector({
       } else if (id.includes('grok-3')) {
         pricing = { prompt: 0.000002, completion: 0.00001 };
       }
-      
+
       return { id, name, pricing } as OpenRouterModel;
     });
   }, [data]);
@@ -484,6 +592,98 @@ export function ModelSelector({
     if (!open) setSearch('');
   }, [open]);
 
+  useEffect(() => {
+    setOptimisticModelId(selectedModelId);
+  }, [selectedModelId, setOptimisticModelId]);
+
+  const pollForCopilotToken = async (
+    deviceCode: string,
+    intervalSeconds: number,
+  ) => {
+    const maxAttempts = 60;
+    let attempts = 0;
+
+    const poll = async () => {
+      try {
+        const response = await fetch('/api/github-copilot/poll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deviceCode }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.accessToken) {
+            setIsCopilotConnecting(false);
+            setCopilotConnection(null);
+            setCopilotError(null);
+            mutateCopilotStatus({ connected: true }, false);
+            toast.success('GitHub Copilot connected successfully!');
+            return;
+          }
+          if (data.error) {
+            setIsCopilotConnecting(false);
+            setCopilotError(data.error);
+            return;
+          }
+        }
+
+        attempts += 1;
+        if (attempts < maxAttempts) {
+          setTimeout(poll, intervalSeconds * 1000);
+        } else {
+          setIsCopilotConnecting(false);
+          setCopilotError('Connection timed out. Please try again.');
+        }
+      } catch (error) {
+        attempts += 1;
+        if (attempts < maxAttempts) {
+          setTimeout(poll, intervalSeconds * 1000);
+        } else {
+          setIsCopilotConnecting(false);
+          setCopilotError('Connection failed. Please try again.');
+        }
+      }
+    };
+
+    poll();
+  };
+
+  const handleCopilotConnect = async () => {
+    setIsCopilotConnecting(true);
+    setCopilotError(null);
+
+    try {
+      const response = await fetch('/api/github-copilot/connect', {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to initiate connection');
+      }
+
+      const data = await response.json();
+
+      if (data.deviceCode && data.verificationUri) {
+        setCopilotConnection({
+          deviceCode: data.deviceCode,
+          userCode: data.userCode,
+          verificationUri: data.verificationUri,
+          expiresIn: data.expiresIn,
+          interval: data.interval ?? 5,
+        });
+
+        window.open(data.verificationUri, '_blank');
+        pollForCopilotToken(data.deviceCode, data.interval ?? 5);
+      } else {
+        throw new Error('Invalid device response');
+      }
+    } catch (error) {
+      setIsCopilotConnecting(false);
+      setCopilotError('Failed to connect GitHub Copilot.');
+    }
+  };
+
   const handleConfirmExpensive = () => {
     if (!pendingModelId) return;
     startTransition(() => {
@@ -517,7 +717,12 @@ export function ModelSelector({
             : [...currentList, id],
         } as { favorites: string[] };
       },
-      { optimisticData: undefined, populateCache: true, rollbackOnError: false, revalidate: false },
+      {
+        optimisticData: undefined,
+        populateCache: true,
+        rollbackOnError: false,
+        revalidate: false,
+      },
     );
   };
 
@@ -551,9 +756,9 @@ export function ModelSelector({
               className={cn(
                 'relative group rounded-xl border transition-all duration-200 cursor-pointer',
                 'bg-card hover:bg-accent/50 p-4 min-h-[140px] flex flex-col',
-                isSelected 
-                  ? 'border-primary bg-primary/5' 
-                  : 'border-border hover:border-primary/50'
+                isSelected
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-primary/50',
               )}
               onClick={handleModelSelect}
               onContextMenu={(e) => {
@@ -561,46 +766,50 @@ export function ModelSelector({
                 toggleFav(id);
               }}
             >
-        {/* Header with icon and favorite */}
-        <div className="flex items-start justify-between mb-3">
-          {getModelIcon(id, name)}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleFav(id);
-            }}
-            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
-          >
-            <div className={isFavorite ? "text-yellow-500" : "text-muted-foreground"}>
-              {isFavorite ? (
-                <StarFillIcon size={14} />
-              ) : (
-                <StarIcon size={14} />
-              )}
-            </div>
-          </button>
-        </div>
+              {/* Header with icon and favorite */}
+              <div className="flex items-start justify-between mb-3">
+                {getModelIcon(id, name)}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFav(id);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"
+                >
+                  <div
+                    className={
+                      isFavorite ? 'text-yellow-500' : 'text-muted-foreground'
+                    }
+                  >
+                    {isFavorite ? (
+                      <StarFillIcon size={14} />
+                    ) : (
+                      <StarIcon size={14} />
+                    )}
+                  </div>
+                </button>
+              </div>
 
-        {/* Model name */}
-        <div className="flex-1">
-          <h3 className="font-medium text-sm leading-tight mb-1">
-            {prettyName(id, name)}
-          </h3>
-          {subtitle && (
-            <p className="text-xs text-muted-foreground mb-2">{subtitle}</p>
-          )}
-        </div>
+              {/* Model name */}
+              <div className="flex-1">
+                <h3 className="font-medium text-sm leading-tight mb-1">
+                  {prettyName(id, name)}
+                </h3>
+                {subtitle && (
+                  <p className="text-xs text-muted-foreground mb-2">
+                    {subtitle}
+                  </p>
+                )}
+              </div>
 
-        {/* Capabilities and selection indicator */}
-        <div className="flex items-center justify-between mt-auto">
-          <div className="flex gap-1 items-center">
-            <PricingDot model={model} />
-            {capabilities}
-          </div>
-          {isSelected && (
-            <CheckCircleFillIcon size={16} />
-          )}
-        </div>
+              {/* Capabilities and selection indicator */}
+              <div className="flex items-center justify-between mt-auto">
+                <div className="flex gap-1 items-center">
+                  <PricingDot model={model} />
+                  {capabilities}
+                </div>
+                {isSelected && <CheckCircleFillIcon size={16} />}
+              </div>
             </div>
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-xs">
@@ -641,7 +850,8 @@ export function ModelSelector({
           <AlertDialogHeader>
             <AlertDialogTitle>Expensive Model Selected</AlertDialogTitle>
             <AlertDialogDescription>
-              This model is considered expensive and may incur higher costs. Would you like to proceed?
+              This model is considered expensive and may incur higher costs.
+              Would you like to proceed?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -655,14 +865,28 @@ export function ModelSelector({
 
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
-          <Button 
-            variant="outline" 
-            className={cn('md:px-2 md:h-[34px] gap-2 flex items-center max-w-[180px]',
+          <Button
+            variant="outline"
+            className={cn(
+              'md:px-2 md:h-[34px] gap-2 flex items-center max-w-[180px]',
+              isCopilotConnected || isCopilotLoading
+                ? ''
+                : 'relative overflow-hidden',
               className,
             )}
           >
+            {!isCopilotConnected && !isCopilotLoading && (
+              <div className="absolute inset-0 backdrop-blur-md bg-background/30 flex items-center justify-center">
+                <span className="text-xs font-medium">Connect to GitHub</span>
+              </div>
+            )}
             {getModelIcon(optimisticModelId, '')}
-            <span className="truncate text-sm font-medium">
+            <span
+              className={cn(
+                'truncate text-sm font-medium',
+                !isCopilotConnected && !isCopilotLoading && 'opacity-50',
+              )}
+            >
               {prettyName(optimisticModelId)}
             </span>
             <ChevronDownIcon />
@@ -672,64 +896,135 @@ export function ModelSelector({
           align="start"
           className="w-[95vw] md:w-[800px] max-h-[600px] overflow-y-auto p-0 bg-popover"
         >
-          {/* Search header */}
-          <div className="sticky top-0 bg-popover border-b p-4 z-10">
-            <div className="relative">
-              <svg
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.35-4.35" />
-              </svg>
-              <Input
-                placeholder="Search models..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 h-10"
-              />
+          {isCopilotLoading ? (
+            <div className="p-6 flex items-center gap-3 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm">Checking GitHub Copilot status...</span>
             </div>
-          </div>
+          ) : !isCopilotConnected ? (
+            <div className="p-6 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center">
+                  <Github className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium">
+                    Connect GitHub Copilot
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Connect your GitHub Copilot subscription to access AI
+                    models.
+                  </p>
+                </div>
+              </div>
 
-          <div className="p-4">
-            {/* Favourites section */}
-            {favouriteModels.length > 0 && (
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="text-yellow-500">
-                    <StarFillIcon size={16} />
+              {copilotConnection ? (
+                <div className="rounded-lg border bg-card p-4 space-y-3">
+                  <div className="text-xs text-muted-foreground">
+                    Enter this code at GitHub device login:
                   </div>
-                  <h2 className="text-sm font-medium">Favorites</h2>
+                  <div className="font-mono text-lg tracking-[0.2em] text-center">
+                    {copilotConnection.userCode}
+                  </div>
+                  <Button variant="outline" className="w-full" asChild>
+                    <a
+                      href={copilotConnection.verificationUri}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open GitHub device login
+                    </a>
+                  </Button>
+                  <div className="text-xs text-muted-foreground">
+                    Waiting for authorization…
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {favouriteModels.map(renderCard)}
-                </div>
-              </div>
-            )}
+              ) : (
+                <Button
+                  onClick={handleCopilotConnect}
+                  disabled={isCopilotConnecting}
+                  className="w-full"
+                >
+                  {isCopilotConnecting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <Github className="mr-2 h-4 w-4" />
+                      Connect GitHub Copilot
+                    </>
+                  )}
+                </Button>
+              )}
 
-            {/* Provider sections */}
-            {providerGroups.map(([provider, models]) => (
-              <div key={provider} className="mb-6">
-                <h2 className="text-sm font-medium mb-3 capitalize text-muted-foreground">
-                  {provider}
-                </h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {models.map(renderCard)}
+              {copilotError && (
+                <div className="text-xs text-destructive">{copilotError}</div>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Search header */}
+              <div className="sticky top-0 bg-popover border-b p-4 z-10">
+                <div className="relative">
+                  <svg
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.35-4.35" />
+                  </svg>
+                  <Input
+                    placeholder="Search models..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-10 h-10"
+                  />
                 </div>
               </div>
-            ))}
 
-            {filteredModels.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                No models found
+              <div className="p-4">
+                {/* Favourites section */}
+                {favouriteModels.length > 0 && (
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="text-yellow-500">
+                        <StarFillIcon size={16} />
+                      </div>
+                      <h2 className="text-sm font-medium">Favorites</h2>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {favouriteModels.map(renderCard)}
+                    </div>
+                  </div>
+                )}
+
+                {/* Provider sections */}
+                {providerGroups.map(([provider, models]) => (
+                  <div key={provider} className="mb-6">
+                    <h2 className="text-sm font-medium mb-3 capitalize text-muted-foreground">
+                      {provider}
+                    </h2>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {models.map(renderCard)}
+                    </div>
+                  </div>
+                ))}
+
+                {filteredModels.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No models found
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </>

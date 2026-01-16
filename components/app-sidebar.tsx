@@ -1,7 +1,13 @@
 'use client';
 
-import type { User } from 'next-auth';
 import { useRouter } from 'next/navigation';
+
+type User = {
+  id: string;
+  email: string | null;
+  name: string | null;
+  imageUrl: string;
+};
 
 import { PlusIcon } from '@/components/icons';
 import { SidebarHistory } from '@/components/sidebar-history';
@@ -20,6 +26,13 @@ import {
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { MessageCircle } from 'lucide-react';
+
+type User = {
+  id: string;
+  email: string | null;
+  name: string | null;
+  imageUrl: string;
+};
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
