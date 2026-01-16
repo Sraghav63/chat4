@@ -30,105 +30,33 @@ import {
   StarFillIcon,
 } from './icons';
 import { Github, Loader2 } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
-type OpenRouterModel = {
+type CopilotModel = {
   id: string;
   name: string;
-  description?: string;
-  architecture?: {
-    input_modalities?: string[];
-    output_modalities?: string[];
+  version?: string;
+  capabilities?: {
+    type?: string;
+    family?: string;
   };
-  context_length?: number;
-  pricing?: {
-    prompt: string | number;
-    completion: string | number;
+  vendor?: string;
+  family?: string;
+  isDefault?: boolean;
+  policy?: {
+    state?: string;
   };
 };
 
+// Legacy type alias for compatibility
+type OpenRouterModel = CopilotModel;
+
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-const FAVORITE_IDS = ['openai/gpt-4o', 'openai/gpt-4o-mini'];
-
-// A small curated set of popular models that renders instantly while the full
-// OpenRouter list is still loading. Keeping this list in-memory means the
-// selector feels snappy even on first visit or cold edge cache.
-const DEFAULT_IDS = [
-  'meta-llama/llama-4-maverick:free',
-  'anthropic/claude-sonnet-4',
-  'google/gemini-2.0-flash-001',
-  'openai/gpt-5',
-  'openai/gpt-4.1-mini',
-  'openai/gpt-4.1',
-  'openai/o4-mini',
-  'openai/o4-mini-high',
-  'x-ai/grok-3-mini',
-  'google/gemini-2.5-flash',
-  'google/gemini-2.5-pro',
-  'deepseek/deepseek-chat-v3-0324:free',
-  'deepseek/deepseek-r1-0528:free',
-];
-
-const PROVIDER_ORDER = [
-  'google',
-  'anthropic',
-  'openai',
-  'x-ai',
-  'meta',
-  'mistral',
-  'deepseek',
-];
+const PROVIDER_ORDER = ['openai', 'anthropic', 'google', 'azure', 'o1'];
 
 const ICON_CONTAINER_CLASSES =
   'w-6 h-6 rounded-lg flex items-center justify-center';
-
-const EXPENSIVE_MODEL_IDS = new Set<string>([
-  'openai/o1-pro',
-  'openai/gpt-4.5-preview',
-  'openai/gpt-4o-search-preview',
-  'openai/gpt-4',
-  'openai/gpt-4-0314',
-  'openai/o3-pro',
-  'openai/gpt-4o-mini-search-preview',
-  'anthropic/claude-opus-4',
-  'anthropic/claude-3-opus:beta',
-  'anthropic/claude-3-opus',
-  'openai/o1',
-  'openai/o1-preview',
-  'openai/gpt-4-turbo',
-  'openai/gpt-4-turbo-preview',
-  'openai/gpt-4-1106-preview',
-  'anthropic/claude-2.1:beta',
-  'anthropic/claude-2.1',
-  'anthropic/claude-2:beta',
-  'anthropic/claude-2',
-  'anthropic/claude-2.0:beta',
-  'anthropic/claude-2.0',
-  'alpindale/goliath-120b',
-  'openai/gpt-4o:extended',
-  'perplexity/sonar-reasoning',
-  'x-ai/grok-vision-beta',
-  'x-ai/grok-beta',
-  'openai/chatgpt-4o-latest',
-  'openai/gpt-4o-2024-05-13',
-  'perplexity/sonar',
-  'perplexity/llama-3.1-sonar-large-128k-online',
-  'raifle/sorcererlm-8x22b',
-  'x-ai/grok-3',
-  'x-ai/grok-3-beta',
-  'perplexity/sonar-pro',
-]);
 
 const getModelIcon = (modelId: string, modelName: string) => {
   const provider = modelId.split('/')[0].toLowerCase();
@@ -276,84 +204,19 @@ const getModelIcon = (modelId: string, modelName: string) => {
   );
 };
 
-// Get pricing tier based on model pricing
-const getPricingTier = (model: OpenRouterModel) => {
-  if (!model.pricing) return 'unknown';
-
-  // OpenRouter returns pricing per token, convert to per 1M tokens for calculation
-  const promptPricePerToken =
-    typeof model.pricing.prompt === 'string'
-      ? Number.parseFloat(model.pricing.prompt) || 0
-      : (model.pricing.prompt as number) || 0;
-  const completionPricePerToken =
-    typeof model.pricing.completion === 'string'
-      ? Number.parseFloat(model.pricing.completion) || 0
-      : (model.pricing.completion as number) || 0;
-
-  const avgPricePer1M =
-    ((promptPricePerToken + completionPricePerToken) / 2) * 1000000;
-
-  // Price thresholds (per 1M tokens)
-  if (avgPricePer1M <= 0.5) return 'cheap'; // Green - very cheap/free
-  if (avgPricePer1M <= 5) return 'moderate'; // Yellow - moderate
-  return 'expensive'; // Red - expensive
-};
-
-// Format pricing for display
-const formatPricing = (model: OpenRouterModel) => {
-  if (!model.pricing) return 'Pricing unavailable';
-
-  // OpenRouter returns pricing per token, we need to convert to per 1M tokens
-  const promptPricePerToken =
-    typeof model.pricing.prompt === 'string'
-      ? Number.parseFloat(model.pricing.prompt)
-      : model.pricing.prompt;
-  const completionPricePerToken =
-    typeof model.pricing.completion === 'string'
-      ? Number.parseFloat(model.pricing.completion)
-      : model.pricing.completion;
-
-  if (promptPricePerToken === 0 && completionPricePerToken === 0) {
-    return 'Free';
-  }
-
-  // Convert to per 1M tokens and format nicely
-  const promptPer1M = (promptPricePerToken * 1000000).toFixed(2);
-  const completionPer1M = (completionPricePerToken * 1000000).toFixed(2);
-
-  return `$${promptPer1M}/$${completionPer1M} per 1M tokens`;
-};
-
-// Pricing dot component
-const PricingDot = ({ model }: { model: OpenRouterModel }) => {
-  const tier = getPricingTier(model);
-  const colors = {
-    cheap: 'bg-green-500',
-    moderate: 'bg-yellow-500',
-    expensive: 'bg-red-500',
-    unknown: 'bg-gray-400',
-  };
-
-  return (
-    <div
-      className={`w-2 h-2 rounded-full ${colors[tier]}`}
-      title={formatPricing(model)}
-    />
-  );
-};
-
 // Re-export helpers so other components can consume the same visual logic
 export { getModelIcon, prettyName, type OpenRouterModel };
 
-// Get capability badges for a model
-const getCapabilityBadges = (model: OpenRouterModel) => {
+// Get capability badges for a model based on Copilot model capabilities
+const getCapabilityBadges = (model: CopilotModel) => {
   const badges = [];
   const name = model.name.toLowerCase();
   const id = model.id.toLowerCase();
+  const capabilities = model.capabilities;
 
-  // Vision capability
+  // Vision capability - check capabilities.type or name hints
   if (
-    model.architecture?.input_modalities?.includes('image') ||
+    capabilities?.type === 'chat' ||
     name.includes('vision') ||
     name.includes('4o') ||
     name.includes('flash')
@@ -362,6 +225,7 @@ const getCapabilityBadges = (model: OpenRouterModel) => {
       <div
         key="vision"
         className="w-4 h-4 rounded bg-green-500/20 flex items-center justify-center"
+        title="Supports vision"
       >
         <svg
           width="10"
@@ -376,40 +240,18 @@ const getCapabilityBadges = (model: OpenRouterModel) => {
     );
   }
 
-  // Code capability
+  // Reasoning capability - o1, o3 models
   if (
-    name.includes('code') ||
-    name.includes('coder') ||
-    id.includes('deepseek')
-  ) {
-    badges.push(
-      <div
-        key="code"
-        className="w-4 h-4 rounded bg-blue-500/20 flex items-center justify-center"
-      >
-        <svg
-          width="10"
-          height="10"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          className="text-blue-400"
-        >
-          <path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0L19.2 12l-4.6-4.6L16 6l6 6-6 6-1.4-1.4z" />
-        </svg>
-      </div>,
-    );
-  }
-
-  // Reasoning capability
-  if (
-    name.includes('reasoning') ||
     name.includes('o1') ||
-    name.includes('o3')
+    name.includes('o3') ||
+    id.includes('o1') ||
+    id.includes('o3')
   ) {
     badges.push(
       <div
         key="reasoning"
         className="w-4 h-4 rounded bg-purple-500/20 flex items-center justify-center"
+        title="Reasoning model"
       >
         <svg
           width="10"
@@ -419,30 +261,6 @@ const getCapabilityBadges = (model: OpenRouterModel) => {
           className="text-purple-400"
         >
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-        </svg>
-      </div>,
-    );
-  }
-
-  // Experimental/Beta
-  if (
-    name.includes('preview') ||
-    name.includes('beta') ||
-    name.includes('experimental')
-  ) {
-    badges.push(
-      <div
-        key="experimental"
-        className="w-4 h-4 rounded bg-orange-500/20 flex items-center justify-center"
-      >
-        <svg
-          width="10"
-          height="10"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          className="text-orange-400"
-        >
-          <path d="M9 11H7v6h2v-6zm4 0h-2v6h2v-6zm4 0h-2v6h2v-6zM4 19h16v2H4z" />
         </svg>
       </div>,
     );
@@ -473,7 +291,7 @@ const prettyName = (id: string, name?: string) => {
 };
 
 // Get model subtitle/description
-const getModelSubtitle = (model: OpenRouterModel) => {
+const getModelSubtitle = (model: CopilotModel) => {
   const name = model.name.toLowerCase();
   const id = model.id.toLowerCase();
 
@@ -481,7 +299,6 @@ const getModelSubtitle = (model: OpenRouterModel) => {
     return '(Thinking)';
   if (name.includes('preview') || name.includes('beta')) return '(Preview)';
   if (name.includes('experimental')) return '(Experimental)';
-  if (id.includes('openrouter')) return '(OpenRouter)';
   if (name.includes('distilled')) return '(Distilled)';
   if (name.includes('fireworks')) return '(Fireworks)';
 
@@ -490,18 +307,17 @@ const getModelSubtitle = (model: OpenRouterModel) => {
 
 export function ModelSelector({
   selectedModelId,
-  onSelect,
+  onModelSelect,
   className,
 }: {
   selectedModelId: string;
-  onSelect?: (id: string) => void;
-} & React.ComponentProps<typeof Button>) {
+  onModelSelect?: (id: string) => void;
+  className?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [optimisticModelId, setOptimisticModelId] =
     useOptimistic(selectedModelId);
   const [search, setSearch] = useState('');
-  const [showExpensiveDialog, setShowExpensiveDialog] = useState(false);
-  const [pendingModelId, setPendingModelId] = useState<string | null>(null);
   const [copilotConnection, setCopilotConnection] = useState<{
     deviceCode: string;
     userCode: string;
@@ -512,10 +328,6 @@ export function ModelSelector({
   const [isCopilotConnecting, setIsCopilotConnecting] = useState(false);
   const [copilotError, setCopilotError] = useState<string | null>(null);
 
-  const { data } = useSWR<{ data: OpenRouterModel[] }>(
-    '/api/openrouter/models',
-    fetcher,
-  );
   const {
     data: copilotStatus,
     error: copilotStatusError,
@@ -523,37 +335,32 @@ export function ModelSelector({
   } = useSWR<{ connected: boolean }>('/api/github-copilot/status', fetcher);
   const isCopilotLoading = !copilotStatus && !copilotStatusError;
   const isCopilotConnected = copilotStatus?.connected ?? false;
-  // Use models returned from API if available, otherwise fall back to a minimal
-  // list built from DEFAULT_IDS so users always see something to pick.
-  const models: OpenRouterModel[] = useMemo(() => {
-    if (Array.isArray(data?.data) && data.data.length > 0) {
-      return data.data as OpenRouterModel[];
+
+  const {
+    data: copilotModelsData,
+    isLoading: isModelsLoading,
+    error: modelsError,
+    mutate: mutateModels,
+  } = useSWR<{
+    models: CopilotModel[];
+    error?: string;
+  }>(isCopilotConnected ? '/api/github-copilot/models' : null, fetcher);
+
+  // Use Copilot models, show empty state when not connected
+  const models: CopilotModel[] = useMemo(() => {
+    if (copilotModelsData?.error) {
+      console.error('Models API error:', copilotModelsData.error);
+      return [];
     }
-
-    // Build a minimal stand-in list from DEFAULT_IDS so UI never appears empty.
-    // Add realistic pricing data for common models (per token, like OpenRouter API)
-    return DEFAULT_IDS.map((id) => {
-      const name = id.split('/')[1] ?? id;
-      let pricing = { prompt: 0, completion: 0 }; // Default to free
-
-      // Add realistic pricing for known models (per token)
-      if (id.includes('gpt-4o')) {
-        pricing = { prompt: 0.0000025, completion: 0.00001 };
-      } else if (id.includes('gpt-4')) {
-        pricing = { prompt: 0.00003, completion: 0.00006 };
-      } else if (id.includes('claude-3-opus')) {
-        pricing = { prompt: 0.000015, completion: 0.000075 };
-      } else if (id.includes('claude-sonnet-4')) {
-        pricing = { prompt: 0.000003, completion: 0.000015 };
-      } else if (id.includes('gemini-2')) {
-        pricing = { prompt: 0.000001, completion: 0.000005 };
-      } else if (id.includes('grok-3')) {
-        pricing = { prompt: 0.000002, completion: 0.00001 };
-      }
-
-      return { id, name, pricing } as OpenRouterModel;
-    });
-  }, [data]);
+    if (copilotModelsData?.models && copilotModelsData.models.length > 0) {
+      console.log('Loaded models:', copilotModelsData.models.length);
+      return copilotModelsData.models;
+    }
+    if (copilotModelsData && copilotModelsData.models?.length === 0) {
+      console.warn('Models array is empty');
+    }
+    return [];
+  }, [copilotModelsData]);
 
   const filteredModels = useMemo(() => {
     if (!search.trim()) return models;
@@ -574,8 +381,8 @@ export function ModelSelector({
   const favouriteModels = filteredModels.filter((m) => allFavIds.has(m.id));
   const remainingAfterFavs = filteredModels.filter((m) => !allFavIds.has(m.id));
 
-  // group remaining by provider order
-  const groupedByProvider: Record<string, OpenRouterModel[]> = {};
+  // group remaining by provider/vendor
+  const groupedByProvider: Record<string, CopilotModel[]> = {};
   remainingAfterFavs.forEach((model) => {
     const provider = model.id.split('/')[0];
     if (!groupedByProvider[provider]) groupedByProvider[provider] = [];
@@ -595,6 +402,17 @@ export function ModelSelector({
   useEffect(() => {
     setOptimisticModelId(selectedModelId);
   }, [selectedModelId, setOptimisticModelId]);
+
+  // Refetch models when connection status changes to connected
+  useEffect(() => {
+    if (isCopilotConnected && mutateModels) {
+      // Small delay to ensure token is saved
+      const timer = setTimeout(() => {
+        mutateModels();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isCopilotConnected, mutateModels]);
 
   const pollForCopilotToken = async (
     deviceCode: string,
@@ -617,7 +435,16 @@ export function ModelSelector({
             setIsCopilotConnecting(false);
             setCopilotConnection(null);
             setCopilotError(null);
+            // Update status optimistically
             mutateCopilotStatus({ connected: true }, false);
+            // Wait a bit for the token to be saved to the database, then refetch
+            setTimeout(async () => {
+              // Force refetch status and models
+              await mutateCopilotStatus();
+              if (mutateModels) {
+                await mutateModels();
+              }
+            }, 1000);
             toast.success('GitHub Copilot connected successfully!');
             return;
           }
@@ -684,15 +511,6 @@ export function ModelSelector({
     }
   };
 
-  const handleConfirmExpensive = () => {
-    if (!pendingModelId) return;
-    startTransition(() => {
-      setOptimisticModelId(pendingModelId);
-      saveChatModelAsCookie(pendingModelId);
-      onSelect?.(pendingModelId);
-    });
-  };
-
   const toggleFav = async (id: string) => {
     // Optimistic update using SWR mutate
     mutateFav(
@@ -726,7 +544,7 @@ export function ModelSelector({
     );
   };
 
-  const renderCard = (model: OpenRouterModel) => {
+  const renderCard = (model: CopilotModel) => {
     const { id, name } = model;
     const isSelected = id === optimisticModelId;
     const isFavorite = allFavIds.has(id);
@@ -734,18 +552,12 @@ export function ModelSelector({
     const subtitle = getModelSubtitle(model);
 
     const handleModelSelect = () => {
-      if (EXPENSIVE_MODEL_IDS.has(id)) {
-        setPendingModelId(id);
-        setShowExpensiveDialog(true);
-        setOpen(false);
-      } else {
-        setOpen(false);
-        startTransition(() => {
-          setOptimisticModelId(id);
-          saveChatModelAsCookie(id);
-          onSelect?.(id);
-        });
-      }
+      setOpen(false);
+      startTransition(() => {
+        setOptimisticModelId(id);
+        saveChatModelAsCookie(id);
+        onModelSelect?.(id);
+      });
     };
 
     return (
@@ -804,10 +616,7 @@ export function ModelSelector({
 
               {/* Capabilities and selection indicator */}
               <div className="flex items-center justify-between mt-auto">
-                <div className="flex gap-1 items-center">
-                  <PricingDot model={model} />
-                  {capabilities}
-                </div>
+                <div className="flex gap-1 items-center">{capabilities}</div>
                 {isSelected && <CheckCircleFillIcon size={16} />}
               </div>
             </div>
@@ -816,16 +625,16 @@ export function ModelSelector({
             <div className="space-y-2">
               <div className="font-medium">{prettyName(id, name)}</div>
               <div className="text-sm text-muted-foreground">
-                {formatPricing(model)}
+                Included with GitHub Copilot
               </div>
-              {model.description && (
+              {model.vendor && (
                 <div className="text-xs text-muted-foreground">
-                  {model.description}
+                  Provider: {model.vendor}
                 </div>
               )}
-              {model.context_length && (
+              {model.family && (
                 <div className="text-xs text-muted-foreground">
-                  Context: {model.context_length.toLocaleString()} tokens
+                  Family: {model.family}
                 </div>
               )}
             </div>
@@ -836,65 +645,39 @@ export function ModelSelector({
   };
 
   return (
-    <>
-      <AlertDialog
-        open={showExpensiveDialog}
-        onOpenChange={(isOpen) => {
-          setShowExpensiveDialog(isOpen);
-          if (!isOpen) {
-            setPendingModelId(null);
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Expensive Model Selected</AlertDialogTitle>
-            <AlertDialogDescription>
-              This model is considered expensive and may incur higher costs.
-              Would you like to proceed?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmExpensive}>
-              Continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
             className={cn(
-              'md:px-2 md:h-[34px] gap-2 flex items-center max-w-[180px]',
-              isCopilotConnected || isCopilotLoading
-                ? ''
-                : 'relative overflow-hidden',
+              'md:px-2 md:h-[34px] gap-2 flex items-center max-w-[180px] relative z-10',
+              'bg-background border-border hover:bg-accent',
               className,
             )}
+            type="button"
+            style={{ pointerEvents: 'auto', opacity: 1 }}
           >
-            {!isCopilotConnected && !isCopilotLoading && (
-              <div className="absolute inset-0 backdrop-blur-md bg-background/30 flex items-center justify-center">
-                <span className="text-xs font-medium">Connect to GitHub</span>
-              </div>
+            {isCopilotLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : !isCopilotConnected ? (
+              <Github className="h-4 w-4" />
+            ) : (
+              getModelIcon(optimisticModelId, '')
             )}
-            {getModelIcon(optimisticModelId, '')}
-            <span
-              className={cn(
-                'truncate text-sm font-medium',
-                !isCopilotConnected && !isCopilotLoading && 'opacity-50',
-              )}
-            >
-              {prettyName(optimisticModelId)}
+            <span className="truncate text-sm font-medium">
+              {isCopilotLoading
+                ? 'Loading...'
+                : !isCopilotConnected
+                  ? 'Connect GitHub'
+                  : prettyName(optimisticModelId)}
             </span>
             <ChevronDownIcon />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="start"
-          className="w-[95vw] md:w-[800px] max-h-[600px] overflow-y-auto p-0 bg-popover"
+          className="w-[95vw] md:w-[800px] max-h-[600px] overflow-y-auto p-0 border-border shadow-xl ring-1 ring-border/10 !bg-neutral-950 opacity-100 z-[100]"
+          style={{ backgroundColor: '#0b0b0f', opacity: 1, zIndex: 100 }}
         >
           {isCopilotLoading ? (
             <div className="p-6 flex items-center gap-3 text-muted-foreground">
@@ -965,8 +748,29 @@ export function ModelSelector({
             </div>
           ) : (
             <>
-              {/* Search header */}
-              <div className="sticky top-0 bg-popover border-b p-4 z-10">
+              {/* Search and Help header */}
+              <div
+                className="sticky top-0 border-b p-4 z-10 space-y-3 !bg-neutral-950 opacity-100"
+                style={{ backgroundColor: '#0b0b0f' }}
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    GitHub Copilot Models
+                  </h3>
+                  <a
+                    href="https://github.com/settings/copilot"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] text-primary hover:underline flex items-center gap-1"
+                  >
+                    <span>Enable more models in GitHub Settings</span>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                      <polyline points="15 3 21 3 21 9" />
+                      <line x1="10" y1="14" x2="21" y2="3" />
+                    </svg>
+                  </a>
+                </div>
                 <div className="relative">
                   <svg
                     className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
@@ -989,44 +793,121 @@ export function ModelSelector({
                 </div>
               </div>
 
-              <div className="p-4">
-                {/* Favourites section */}
-                {favouriteModels.length > 0 && (
-                  <div className="mb-6">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="text-yellow-500">
-                        <StarFillIcon size={16} />
-                      </div>
-                      <h2 className="text-sm font-medium">Favorites</h2>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {favouriteModels.map(renderCard)}
-                    </div>
+              <div
+                className="p-4 min-h-[300px] !bg-neutral-950 opacity-100"
+                style={{ backgroundColor: '#0b0b0f' }}
+              >
+                {/* Error state */}
+                {modelsError && (
+                  <div className="text-center py-12 space-y-2">
+                    <p className="text-destructive font-medium">
+                      Failed to load models
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {modelsError instanceof Error
+                        ? modelsError.message
+                        : 'Please try refreshing the page or check your connection.'}
+                    </p>
                   </div>
                 )}
+
+                {/* Loading state for models */}
+                {!modelsError && isModelsLoading && models.length === 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[...Array(8)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="h-[140px] rounded-xl border border-border animate-pulse bg-muted/20"
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Favourites section */}
+                {!modelsError &&
+                  !isModelsLoading &&
+                  favouriteModels.length > 0 && (
+                    <div className="mb-6">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="text-yellow-500">
+                          <StarFillIcon size={16} />
+                        </div>
+                        <h2 className="text-sm font-medium">Favorites</h2>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {favouriteModels.map(renderCard)}
+                      </div>
+                    </div>
+                  )}
 
                 {/* Provider sections */}
-                {providerGroups.map(([provider, models]) => (
-                  <div key={provider} className="mb-6">
-                    <h2 className="text-sm font-medium mb-3 capitalize text-muted-foreground">
-                      {provider}
-                    </h2>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {models.map(renderCard)}
+                {!modelsError &&
+                  !isModelsLoading &&
+                  providerGroups.map(([provider, models]) => (
+                    <div key={provider} className="mb-6">
+                      <h2 className="text-sm font-medium mb-3 capitalize text-muted-foreground">
+                        {provider}
+                      </h2>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {models.map(renderCard)}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
 
-                {filteredModels.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No models found
-                  </div>
-                )}
+                {!modelsError &&
+                  !isModelsLoading &&
+                  filteredModels.length === 0 && (
+                    <div className="text-center py-12 text-muted-foreground space-y-2">
+                      <p className="font-medium">No models found</p>
+                      {copilotModelsData?.error ? (
+                        <>
+                          <p className="text-xs text-destructive">
+                            Error: {copilotModelsData.error}
+                          </p>
+                          {copilotModelsData.error === 'token_expired' && (
+                            <div className="space-y-2 mt-4">
+                              <p className="text-xs">
+                                Your GitHub Copilot token may have expired. Try
+                                disconnecting and reconnecting.
+                              </p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={async () => {
+                                  await mutateModels();
+                                }}
+                                className="mt-2"
+                              >
+                                Retry
+                              </Button>
+                            </div>
+                          )}
+                          {(copilotModelsData.error?.includes('token_error_404') || 
+                            copilotModelsData.error?.includes('token_error_403')) && (
+                            <div className="space-y-2 mt-4">
+                              <p className="text-xs">
+                                Permissions updated. Please disconnect and reconnect your GitHub account to access models.
+                              </p>
+                            </div>
+                          )}
+                          {copilotModelsData.error === 'not_connected' && (
+                            <p className="text-xs text-primary mt-2">
+                              Make sure you're connected to GitHub Copilot.
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-xs">
+                          Try searching for something else or enable models in
+                          your GitHub Copilot settings.
+                        </p>
+                      )}
+                    </div>
+                  )}
               </div>
             </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-    </>
   );
 }

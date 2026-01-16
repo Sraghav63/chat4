@@ -36,7 +36,7 @@ export async function POST() {
       },
       body: JSON.stringify({
         client_id: clientId,
-        scope: 'copilot',
+        scope: 'read:user copilot',
       }),
     });
 

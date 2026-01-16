@@ -25,12 +25,17 @@ function PureChatHeader({
   const { open } = useSidebar();
 
   const { width: windowWidth } = useWindowSize();
-  const [selectedModelId, setSelectedModelId] = useState('openai/gpt-4o');
+  const [selectedModelId, setSelectedModelId] = useState('gpt-4o');
 
   useEffect(() => {
     const match = document.cookie.match(/(?:^|; )chat-model=([^;]+)/);
     if (match?.[1]) {
-      setSelectedModelId(decodeURIComponent(match[1]));
+      let modelId = decodeURIComponent(match[1]);
+      // Migration: remove openai/ prefix if present from old cookies
+      if (modelId.startsWith('openai/')) {
+        modelId = modelId.replace('openai/', '');
+      }
+      setSelectedModelId(modelId);
     }
   }, []);
 
@@ -68,7 +73,7 @@ function PureChatHeader({
       {!isReadonly && (
         <ModelSelector
           selectedModelId={selectedModelId}
-          onSelect={setSelectedModelId}
+          onModelSelect={setSelectedModelId}
           className="order-3 md:order-4"
         />
       )}
